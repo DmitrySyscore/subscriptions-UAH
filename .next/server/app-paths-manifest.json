@@ -1,0 +1,8 @@
+{
+  "/api/user-by-stripe-id/route": "app/api/user-by-stripe-id/route.js",
+  "/api/check-sla-status/route": "app/api/check-sla-status/route.js",
+  "/page": "app/page.js",
+  "/signature-status/page": "app/signature-status/page.js",
+  "/checkout/page": "app/checkout/page.js",
+  "/success/page": "app/success/page.js"
+}

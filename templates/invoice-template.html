@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invoice</title>
+  <style>
+    body {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      margin: 50px;
+      font-size: 12px;
+      color: #333;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    .info {
+      margin-top: 10px;
+    }
+    .section {
+      margin-top: 30px;
+    }
+    .label {
+      font-weight: bold;
+    }
+    .address, .bill-to {
+      margin-top: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border-bottom: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: #f5f5f5;
+    }
+    .totals {
+      margin-top: 20px;
+      text-align: right;
+      font-size: 14px;
+    }
+    .due {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+    .pay-online {
+      margin-top: 10px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+    <div style="position: absolute; top: 20px; right: 20px;">
+        {{{invoice.logo_svg}}}
+    </div>
+
+  <div class="header" style="margin-top: 120px;">
+    <div>
+      <div class="title">Invoice</div>
+      <div class="info">Invoice number: {{invoice.number}}</div>
+      <div class="info">Date of issue: {{invoice.date_issued}}</div>
+      <div class="info">Date due: {{invoice.due_date}}</div>
+    </div>
+    <div style="text-align: right;">
+      <div class="label">{{invoice.seller_name}}</div>
+      <div class="address">{{invoice.seller_address}}</div>
+      <div class="address">{{invoice.seller_country}}</div>
+      <div class="address">{{invoice.seller_email}}</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">Bill to</div>
+    <div class="bill-to">{{invoice.customer_name}}</div>
+    <div class="bill-to">{{invoice.customer_email}}</div>
+  </div>
+
+  <div class="due">€{{invoice.total}} due {{invoice.date_issued}}</div>
+  <div class="pay-online"><a href="{{invoice.hosted_invoice_url}}">Pay online</a></div>
+
+    <table>
+  <thead>
+    <tr>
+      <th>Description</th>
+      <th>Unit Price</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+   
+   {{#each invoice.lines}}
+      <tr>
+        <td>
+          <strong>{{description}}</strong><br/>
+          <em>{{description_details}}</em><br/>
+          <em>{{period}}</em>
+        </td>
+        <td>€ {{unit_price}}</td>
+        <td>€ {{total}}</td>
+      </tr>
+    {{/each}}
+  </tbody>
+    </table>
+
+
+  <div class="totals">
+    <p>Subtotal: €{{invoice.total}}</p>
+    <p>Total: €{{invoice.total}}</p>
+    <p><strong>Amount due: €{{invoice.total}}</strong></p>
+  </div>
+
+</body>
+</html>
