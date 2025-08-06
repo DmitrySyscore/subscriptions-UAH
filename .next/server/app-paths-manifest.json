@@ -1,8 +1,13 @@
 {
-  "/api/user-by-stripe-id/route": "app/api/user-by-stripe-id/route.js",
+  "/api/stripe/webhook/route": "app/api/stripe/webhook/route.js",
+  "/api/yousign/status/route": "app/api/yousign/status/route.js",
+  "/api/payment-methods/[customerId]/route": "app/api/payment-methods/[customerId]/route.js",
+  "/api/create-subscription-direct/route": "app/api/create-subscription-direct/route.js",
+  "/api/invoice/[customerId]/pdf/route": "app/api/invoice/[customerId]/pdf/route.js",
   "/api/check-sla-status/route": "app/api/check-sla-status/route.js",
+  "/api/yousign/start-signing/route": "app/api/yousign/start-signing/route.js",
   "/page": "app/page.js",
-  "/signature-status/page": "app/signature-status/page.js",
   "/checkout/page": "app/checkout/page.js",
+  "/signature-status/page": "app/signature-status/page.js",
   "/success/page": "app/success/page.js"
 }

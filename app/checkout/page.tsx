@@ -84,8 +84,18 @@ export default function CheckoutPage() {
             const currentTierLevel = getTierLevel(data.slaTier);
             const selectedTierLevel = getTierLevel(selectedTier);
             
-            if (selectedTierLevel <= currentTierLevel) {
-              setTierError('You already have an active subscription with same or higher access level');
+            // Get selected location from URL parameters
+            const selectedLocation = urlParams.get('location');
+            
+            // Check if this is a same-locale downgrade
+            const isSameLocale = selectedLocation === data.location;
+            const isDowngrade = selectedTierLevel <= currentTierLevel;
+            
+            if (isDowngrade && isSameLocale) {
+              setTierError(`You already have an active ${data.slaTier} subscription in ${data.location}. You cannot downgrade to ${selectedTier} in the same region.`);
+            } else if (isDowngrade && !isSameLocale) {
+              // Allow cross-locale downgrades, but show a warning
+              console.log(`Allowing cross-locale downgrade: ${data.slaTier} ${data.location} → ${selectedTier} ${selectedLocation}`);
             }
           }
         } else {
@@ -112,16 +122,29 @@ export default function CheckoutPage() {
       const searchParams = new URLSearchParams(window.location.search);
       const selectedTier = searchParams.get('slaTier');
       const productType = searchParams.get('productType');
+      const selectedLocation = searchParams.get('location');
       
       const isSLAPurchase = selectedTier && (productType === 'SLA' || productType === 'Both');
-      const isUpgrade = isSLAPurchase &&
-                       slaStatus?.hasActiveSLA &&
-                       getTierLevel(selectedTier) > getTierLevel(slaStatus.tier || '');
+      
+      // Check for upgrade scenarios
+      let isUpgrade = false;
+      if (isSLAPurchase && slaStatus?.hasActiveSLA) {
+        const currentTierLevel = getTierLevel(slaStatus.tier || '');
+        const selectedTierLevel = getTierLevel(selectedTier);
+        
+        // Tier upgrade (regardless of location)
+        const isTierUpgrade = selectedTierLevel > currentTierLevel;
+        
+        // Same-tier cross-locale switch
+        const isCrossLocaleSwitch = selectedTierLevel === currentTierLevel && selectedLocation !== slaStatus.location;
+        
+        isUpgrade = isTierUpgrade || isCrossLocaleSwitch;
+      }
       
       // If this is an upgrade, cancel the current subscription first
       if (isUpgrade && slaStatus?.subscriptionId) {
         const confirmUpgrade = window.confirm(
-          `You are upgrading from ${slaStatus.tier} to ${selectedTier}. Your current active ${slaStatus.tier} subscription will be cancelled. Do you want to continue?`
+          `You are ${selectedLocation === slaStatus.location ? 'upgrading' : 'switching'} from ${slaStatus.tier} (${slaStatus.location}) to ${selectedTier} (${selectedLocation}). Your current active ${slaStatus.tier} subscription will be cancelled. Do you want to continue?`
         );
         
         if (!confirmUpgrade) {
@@ -212,6 +235,7 @@ export default function CheckoutPage() {
     const searchParams = new URLSearchParams(window.location.search);
     const selectedTier = searchParams.get('slaTier');
     const productType = searchParams.get('productType');
+    const selectedLocation = searchParams.get('location');
     
     if (!selectedTier || (productType !== 'SLA' && productType !== 'Both')) {
       return null;
@@ -220,12 +244,27 @@ export default function CheckoutPage() {
     const currentTierLevel = getTierLevel(slaStatus.tier || '');
     const selectedTierLevel = getTierLevel(selectedTier);
     
+    // Check if this is a tier upgrade (regardless of location)
     if (selectedTierLevel > currentTierLevel) {
       return {
         isUpgrade: true,
         fromTier: slaStatus.tier,
         toTier: selectedTier,
-        message: `Upgrade from ${slaStatus.tier} to ${selectedTier} - current active subscription will be cancelled`
+        fromLocation: slaStatus.location,
+        toLocation: selectedLocation,
+        message: `Upgrade from ${slaStatus.tier} (${slaStatus.location}) to ${selectedTier} (${selectedLocation}) - current active subscription will be cancelled`
+      };
+    }
+    
+    // Check if this is a same-tier cross-locale upgrade
+    if (selectedTierLevel === currentTierLevel && selectedLocation !== slaStatus.location) {
+      return {
+        isUpgrade: true,
+        fromTier: slaStatus.tier,
+        toTier: selectedTier,
+        fromLocation: slaStatus.location,
+        toLocation: selectedLocation,
+        message: `Switch from ${slaStatus.tier} (${slaStatus.location}) to ${selectedTier} (${selectedLocation}) - current active subscription will be cancelled`
       };
     }
     

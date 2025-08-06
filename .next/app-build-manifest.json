@@ -5,40 +5,20 @@
       "static/chunks/main-app.js",
       "static/chunks/app/layout.js"
     ],
-    "/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
-    ],
     "/checkout/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/checkout/page.js"
-    ],
-    "/api/user-by-stripe-id/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/user-by-stripe-id/route.js"
     ],
     "/api/check-sla-status/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/check-sla-status/route.js"
     ],
-    "/api/cancel-subscription/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/cancel-subscription/route.js"
-    ],
     "/api/yousign/start-signing/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/api/yousign/start-signing/route.js"
-    ],
-    "/api/stripe/webhook/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/stripe/webhook/route.js"
     ],
     "/signature-status/page": [
       "static/chunks/webpack.js",
@@ -60,6 +40,16 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/create-subscription-direct/route.js"
     ],
+    "/api/stripe/webhook/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/stripe/webhook/route.js"
+    ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
     "/success/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -70,10 +60,10 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/invoice/[customerId]/pdf/route.js"
     ],
-    "/api/clear-referral/route": [
+    "/api/cancel-subscription/route": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/api/clear-referral/route.js"
+      "static/chunks/app/api/cancel-subscription/route.js"
     ]
   }
 }
