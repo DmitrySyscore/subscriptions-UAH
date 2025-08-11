@@ -8,6 +8,13 @@ interface SLAStatus {
   tier?: string;
   location?: string;
   subscriptionId?: string;
+  activeSLAs?: Array<{
+    subscriptionId: string;
+    productId: string;
+    productName: string;
+    slaTier: string;
+    location: string;
+  }>;
 }
 
 export default function CheckoutPage() {
@@ -21,6 +28,8 @@ export default function CheckoutPage() {
   const [checkingSLA, setCheckingSLA] = useState(false);
   const [slaError, setSlaError] = useState<string | null>(null);
   const [tierError, setTierError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationConflict, setLocationConflict] = useState<string | null>(null);
 
   const ref = searchParams.get('ref'); // referrer Id
   const userId = searchParams.get('userId'); // userId from URL
@@ -56,12 +65,14 @@ export default function CheckoutPage() {
         setSlaStatus(null);
         setSlaError(null);
         setTierError(null);
+        setLocationConflict(null);
         return;
       }
 
       setCheckingSLA(true);
       setSlaError(null);
       setTierError(null);
+      setLocationConflict(null);
 
       try {
         const res = await fetch(`/api/check-sla-status?userId=${encodeURIComponent(userId)}`);
@@ -72,20 +83,54 @@ export default function CheckoutPage() {
             hasActiveSLA: data.hasActiveSLA,
             tier: data.slaTier,
             location: data.location,
-            subscriptionId: data.subscriptionId
+            subscriptionId: data.subscriptionId,
+            activeSLAs: data.activeSLAs || []
           });
 
-          // Check for tier conflict if user is trying to purchase SLA
+          // Check for location-based conflicts
           const urlParams = new URLSearchParams(window.location.search);
           const selectedTier = urlParams.get('slaTier');
           const productType = urlParams.get('productType');
+          const selectedLocation = urlParams.get('location');
           
-          if (data.hasActiveSLA && selectedTier && (productType === 'SLA' || productType === 'Both')) {
-            const currentTierLevel = getTierLevel(data.slaTier);
-            const selectedTierLevel = getTierLevel(selectedTier);
+          if (selectedTier && selectedLocation && (productType === 'SLA' || productType === 'Both')) {
+            const selectedContinent = selectedLocation.split('_')[0];
             
-            if (selectedTierLevel <= currentTierLevel) {
-              setTierError('You already have an active subscription with same or higher access level');
+            // Check for continent-level restriction
+            const existingContinents = new Set(
+              data.activeSLAs?.map((sla: any) => sla.location.split('_')[0]) || []
+            );
+            
+            if (existingContinents.has(selectedContinent)) {
+              // Allow same continent purchases
+            } else if (data.activeSLAs && data.activeSLAs.length > 0) {
+              // Prevent cross-continent purchases
+              const existingContinent = data.activeSLAs[0].location.split('_')[0];
+              setLocationConflict(`You already have an active SLA subscription in ${existingContinent}. You cannot purchase an SLA in a different continent (${selectedContinent}).`);
+            }
+
+            // Check for existing SLA at same location with same tier
+            const existingSLA = data.activeSLAs?.find(
+              (sla: any) => sla.location === selectedLocation &&
+                           sla.slaTier.toLowerCase() === selectedTier.toLowerCase()
+            );
+
+            if (existingSLA) {
+              setLocationConflict(`You already have a ${selectedTier} SLA subscription at this location. You can only upgrade to a higher tier.`);
+            }
+
+            // Check for tier upgrades
+            const existingAtLocation = data.activeSLAs?.find(
+              (sla: any) => sla.location === selectedLocation
+            );
+
+            if (existingAtLocation) {
+              const currentTierLevel = getTierLevel(existingAtLocation.slaTier);
+              const selectedTierLevel = getTierLevel(selectedTier);
+              
+              if (selectedTierLevel <= currentTierLevel) {
+                setLocationConflict(`You already have a ${existingAtLocation.slaTier} SLA at this location. You can only upgrade to a higher tier.`);
+              }
             }
           }
         } else {
@@ -108,38 +153,61 @@ export default function CheckoutPage() {
     setLoading(true);
     
     try {
-      // Check if this is an upgrade scenario
       const searchParams = new URLSearchParams(window.location.search);
       const selectedTier = searchParams.get('slaTier');
       const productType = searchParams.get('productType');
+      const selectedLocation = searchParams.get('location');
       
       const isSLAPurchase = selectedTier && (productType === 'SLA' || productType === 'Both');
-      const isUpgrade = isSLAPurchase &&
-                       slaStatus?.hasActiveSLA &&
-                       getTierLevel(selectedTier) > getTierLevel(slaStatus.tier || '');
       
-      // If this is an upgrade, cancel the current subscription first
-      if (isUpgrade && slaStatus?.subscriptionId) {
-        const confirmUpgrade = window.confirm(
-          `You are upgrading from ${slaStatus.tier} to ${selectedTier}. Your current active ${slaStatus.tier} subscription will be cancelled. Do you want to continue?`
+      if (isSLAPurchase && selectedLocation && slaStatus?.activeSLAs) {
+        const selectedContinent = selectedLocation.split('_')[0];
+        
+        // Check for continent-level restriction
+        const existingContinents = new Set(
+          slaStatus.activeSLAs.map(sla => sla.location.split('_')[0])
         );
         
-        if (!confirmUpgrade) {
+        if (!existingContinents.has(selectedContinent) && slaStatus.activeSLAs.length > 0) {
+          const existingContinent = slaStatus.activeSLAs[0].location.split('_')[0];
+          alert(`You already have an active SLA subscription in ${existingContinent}. You cannot purchase an SLA in a different continent (${selectedContinent}).`);
           setLoading(false);
           return;
         }
 
-        const cancelRes = await fetch('/api/cancel-subscription', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subscriptionId: slaStatus.subscriptionId }),
-        });
+        // Find existing SLA at the same location
+        const existingSLA = slaStatus.activeSLAs.find(
+          sla => sla.location === selectedLocation
+        );
 
-        if (!cancelRes.ok) {
-          const errorData = await cancelRes.json();
-          alert(`Failed to cancel current subscription: ${errorData.error}`);
-          setLoading(false);
-          return;
+        if (existingSLA) {
+          const currentTierLevel = getTierLevel(existingSLA.slaTier);
+          const selectedTierLevel = getTierLevel(selectedTier);
+          
+          if (selectedTierLevel > currentTierLevel) {
+            // This is an upgrade
+            const confirmUpgrade = window.confirm(
+              `You are upgrading from ${existingSLA.slaTier} to ${selectedTier} at ${selectedLocation}. Your current ${existingSLA.slaTier} subscription will be cancelled. Do you want to continue?`
+            );
+            
+            if (!confirmUpgrade) {
+              setLoading(false);
+              return;
+            }
+
+            const cancelRes = await fetch('/api/cancel-subscription', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ subscriptionId: existingSLA.subscriptionId }),
+            });
+
+            if (!cancelRes.ok) {
+              const errorData = await cancelRes.json();
+              alert(`Failed to cancel current subscription: ${errorData.error}`);
+              setLoading(false);
+              return;
+            }
+          }
         }
       }
 
@@ -190,43 +258,35 @@ export default function CheckoutPage() {
     }
   };
 
-  const getSLAStatusColor = () => {
-    if (!slaStatus) return 'text-gray-600';
-    return slaStatus.hasActiveSLA ? 'text-green-600' : 'text-red-600';
-  };
-
-  const getSLAStatusText = () => {
-    if (checkingSLA) return 'Checking SLA status...';
-    if (slaError) return `Error: ${slaError}`;
-    if (!userId) return 'No user ID provided';
-    
-    if (slaStatus?.hasActiveSLA) {
-      return `Active ${slaStatus.tier} SLA (${slaStatus.location})`;
-    }
-    return 'No active SLA found';
-  };
-
   const getUpgradeInfo = () => {
-    if (!slaStatus?.hasActiveSLA) return null;
+    if (!slaStatus?.activeSLAs || slaStatus.activeSLAs.length === 0) return null;
     
     const searchParams = new URLSearchParams(window.location.search);
     const selectedTier = searchParams.get('slaTier');
     const productType = searchParams.get('productType');
+    const selectedLocation = searchParams.get('location');
     
-    if (!selectedTier || (productType !== 'SLA' && productType !== 'Both')) {
+    if (!selectedTier || !selectedLocation || (productType !== 'SLA' && productType !== 'Both')) {
       return null;
     }
     
-    const currentTierLevel = getTierLevel(slaStatus.tier || '');
-    const selectedTierLevel = getTierLevel(selectedTier);
+    // Find existing SLA at the same location
+    const existingSLA = slaStatus.activeSLAs.find(
+      sla => sla.location === selectedLocation
+    );
     
-    if (selectedTierLevel > currentTierLevel) {
-      return {
-        isUpgrade: true,
-        fromTier: slaStatus.tier,
-        toTier: selectedTier,
-        message: `Upgrade from ${slaStatus.tier} to ${selectedTier} - current active subscription will be cancelled`
-      };
+    if (existingSLA) {
+      const currentTierLevel = getTierLevel(existingSLA.slaTier);
+      const selectedTierLevel = getTierLevel(selectedTier);
+      
+      if (selectedTierLevel > currentTierLevel) {
+        return {
+          isUpgrade: true,
+          fromTier: existingSLA.slaTier,
+          toTier: selectedTier,
+          message: `Upgrade from ${existingSLA.slaTier} to ${selectedTier} at ${selectedLocation} - current active subscription will be cancelled and updated`
+        };
+      }
     }
     
     return null;
@@ -288,15 +348,68 @@ export default function CheckoutPage() {
           className="w-full px-4 py-2 border border-gray-300 rounded mb-4"
       />
 
-      {/* SLA Status Display */}
-      <div className={`mb-4 text-sm font-medium ${getSLAStatusColor()}`}>
-        {getSLAStatusText()}
-      </div>
+      {/* Subscription Information */}
+      {(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        const selectedTier = searchParams.get('slaTier');
+        const productType = searchParams.get('productType');
+        const location = searchParams.get('location');
+        
+        let selectedText = '';
+        if (selectedTier && location && (productType === 'SLA' || productType === 'Both')) {
+          const locationParts = location.split('_');
+          const continent = locationParts[0] || 'Unknown';
+          const country = locationParts[1] || 'Unknown';
+          const city = locationParts[2] || 'Unknown';
+          selectedText = `${selectedTier} SLA - ${continent}, ${country}, ${city}`;
+        }
+
+        return (
+          <>
+            {/* Display all active subscriptions */}
+            {slaStatus?.activeSLAs && slaStatus.activeSLAs.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold mb-2 text-blue-600">Active Subscriptions:</h3>
+                <div className="space-y-1">
+                  {slaStatus.activeSLAs.map((sla, index) => {
+                    const locationParts = sla.location.split('_');
+                    const continent = locationParts[0] || 'Unknown';
+                    const country = locationParts[1] || 'Unknown';
+                    const city = locationParts[2] || 'Unknown';
+                    
+                    return (
+                      <div key={index} className="text-sm text-blue-600">
+                        {sla.slaTier} SLA - {continent}, {country}, {city}
+                      </div>
+                    ); 
+                  })}
+                </div>
+              </div>
+            )}
+            
+            {selectedText && (
+              <div className="mb-4 text-sm font-medium text-green-600">
+              <br/>
+                <strong>Selected:</strong> {selectedText}
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Tier Error Display */}
       {tierError && (
         <div className="mb-4 text-sm font-medium text-red-600">
           {tierError}
+        </div>
+      )}
+
+      {/* Location Conflict Display */}
+      {locationConflict && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+        <br/>
+
+          <strong>❌ Location Restriction:</strong> {locationConflict}
         </div>
       )}
 
@@ -313,7 +426,7 @@ export default function CheckoutPage() {
       <button
         className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
         onClick={handleCheckout}
-        disabled={loading || (ref && !inviterName) || !signerFirstName || !signerLastName || !signerEmail || !!tierError}
+        disabled={loading || (ref && !inviterName) || !signerFirstName || !signerLastName || !signerEmail || !!tierError || !!locationConflict}
       >
         {loading ? 'Loading...' : 'Proceed to signing documents'}
       </button>

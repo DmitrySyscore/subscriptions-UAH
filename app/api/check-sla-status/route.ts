@@ -55,12 +55,9 @@ export async function GET(req: NextRequest) {
       expand: ['data.items.data.price'],
     });
 
-    // Check each subscription for SLA products
-    let slaSubscription = null;
-    let slaItem = null;
-    let productId = '';
-    let productName = '';
-
+    // Collect all active SLA subscriptions
+    const activeSLAs = [];
+    
     for (const subscription of subscriptions.data) {
       for (const item of subscription.items.data) {
         const productIdFromPrice = typeof item.price.product === 'string'
@@ -68,25 +65,31 @@ export async function GET(req: NextRequest) {
           : item.price.product?.id;
 
         if (productIdFromPrice && SLA_PRODUCTS.includes(productIdFromPrice)) {
-          slaSubscription = subscription;
-          slaItem = item;
-          productId = productIdFromPrice;
-          
-          // Get product details
+          let productName = 'Unknown';
           try {
             const product = await stripe.products.retrieve(productIdFromPrice);
             productName = product.name || 'Unknown';
           } catch (error) {
             productName = 'Unknown';
           }
-          
-          break;
+
+          // Get location from subscription metadata
+          const location = subscription.metadata?.location ||
+                          subscription.metadata?.fullLocation ||
+                          getLocationFromProduct(productIdFromPrice);
+           
+          activeSLAs.push({
+            subscriptionId: subscription.id,
+            productId: productIdFromPrice,
+            productName: productName,
+            slaTier: getSLATierFromProduct(productIdFromPrice),
+            location: location,
+          });
         }
       }
-      if (slaSubscription) break;
     }
 
-    if (!slaSubscription || !slaItem) {
+    if (activeSLAs.length === 0) {
       return NextResponse.json({
         hasActiveSLA: false,
         customerId: userId,
@@ -94,14 +97,17 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Return all active SLAs for validation
     return NextResponse.json({
       hasActiveSLA: true,
       customerId: userId,
-      subscriptionId: slaSubscription.id,
-      productId: productId,
-      productName: productName,
-      slaTier: getSLATierFromProduct(productId),
-      location: getLocationFromProduct(productId),
+      activeSLAs: activeSLAs,
+      // For backward compatibility, return the first one
+      subscriptionId: activeSLAs[0].subscriptionId,
+      productId: activeSLAs[0].productId,
+      productName: activeSLAs[0].productName,
+      slaTier: activeSLAs[0].slaTier,
+      location: activeSLAs[0].location,
     });
 
   } catch (error) {
@@ -124,12 +130,14 @@ function getSLATierFromProduct(productId: string): string {
 
 function getLocationFromProduct(productId: string): string {
   const locationMap: Record<string, string> = {
-    'prod_Sj8nABZluozK4K': 'EU',
-    'prod_Sj8njJI9kmb4di': 'EU',
-    'prod_Sj8nnl3iCNdqGM': 'EU',
-    'prod_Sj8LxTwLUfzk5t': 'US',
-    'prod_Sj8Lk6eprBEQ3k': 'US',
-    'prod_Sj8Lt4NDbZzI5i': 'US',
+    // EU products - default to Berlin for backward compatibility
+    'prod_Sj8nABZluozK4K': 'Europe_Germany_Berlin',
+    'prod_Sj8njJI9kmb4di': 'Europe_Germany_Berlin',
+    'prod_Sj8nnl3iCNdqGM': 'Europe_Germany_Berlin',
+    // US products - default to Washington for backward compatibility
+    'prod_Sj8LxTwLUfzk5t': 'NorthAmerica_USA_Washington',
+    'prod_Sj8Lk6eprBEQ3k': 'NorthAmerica_USA_Washington',
+    'prod_Sj8Lt4NDbZzI5i': 'NorthAmerica_USA_Washington',
   };
   return locationMap[productId] || 'Unknown';
 }

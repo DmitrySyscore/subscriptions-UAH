@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 export default function HomePage() {
   const [ref, setRef] = useState('');
   const [userIdRef, setUserIdRef] = useState('');
+  const [continent, setContinent] = useState('');
+  const [country, setCountry] = useState('');
   const [location, setLocation] = useState('');
   const [productType, setProductType] = useState('');
   const [slaTier, setSlaTier] = useState('');
@@ -42,7 +44,8 @@ export default function HomePage() {
     }
     
     if (location) {
-      params.set('location', location);
+      const formattedLocation = `${continent}_${country}_${location}`;
+      params.set('location', formattedLocation);
     }
     
     if (productType) {
@@ -97,7 +100,8 @@ export default function HomePage() {
     }
     
     if (location) {
-      params.set('location', location);
+      const formattedLocation = `${continent}_${country}_${location}`;
+      params.set('location', formattedLocation);
     }
     
     if (productType) {
@@ -118,7 +122,7 @@ export default function HomePage() {
   };
 
 
-  const isRegistrationEnabled = location && productType;
+  const isRegistrationEnabled = continent && country && location && productType;
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50 space-y-6">
@@ -137,21 +141,83 @@ export default function HomePage() {
       {/* registration module */}
       <div className="w-full max-w-sm bg-white p-6 rounded shadow space-y-4">
         <div>
-          <label htmlFor="locationSelect" className="block text-gray-700 mb-2">
-            Select location *
+          <label htmlFor="continentSelect" className="block text-gray-700 mb-2">
+            Select continent *
           </label>
           <select
-            id="locationSelect"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            id="continentSelect"
+            value={continent}
+            onChange={(e) => {
+              setContinent(e.target.value);
+              setCountry('');
+              setLocation('');
+            }}
             className="w-full px-4 py-2 border border-gray-300 rounded"
             required
           >
-            <option value="">Select location</option>
-            <option value="EU">Europe</option>
-            <option value="US">USA</option>
+            <option value="">Select continent</option>
+            <option value="North America">North America</option>
+            <option value="Europe">Europe</option>
           </select>
         </div>
+
+        {continent && (
+          <div>
+            <label htmlFor="countrySelect" className="block text-gray-700 mb-2">
+              Select country *
+            </label>
+            <select
+              id="countrySelect"
+              value={country}
+              onChange={(e) => {
+                setCountry(e.target.value);
+                setLocation('');
+              }}
+              className="w-full px-4 py-2 border border-gray-300 rounded"
+              required
+              disabled={!continent}
+            >
+              <option value="">Select country</option>
+              {continent === 'North America' && (
+                <option value="USA">USA</option>
+              )}
+              {continent === 'Europe' && (
+                <option value="Germany">Germany</option>
+              )}
+            </select>
+          </div>
+        )}
+
+        {country && (
+          <div>
+            <label htmlFor="locationSelect" className="block text-gray-700 mb-2">
+              Select location *
+            </label>
+            <select
+              id="locationSelect"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded"
+              required
+              disabled={!country}
+            >
+              <option value="">Select location</option>
+              {country === 'USA' && (
+                <>
+                  <option value="Washington">Washington</option>
+                  <option value="Dallas">Dallas</option>
+                  <option value="New York">New York</option>
+                </>
+              )}
+              {country === 'Germany' && (
+                <>
+                  <option value="Berlin">Berlin</option>
+                  <option value="Dresden">Dresden</option>
+                </>
+              )}
+            </select>
+          </div>
+        )}
 
         <div>
           <label htmlFor="productTypeSelect" className="block text-gray-700 mb-2">
@@ -190,22 +256,22 @@ export default function HomePage() {
               <option value="Bronze">Bronze</option>
             </select>
             <div className="mt-2 text-sm text-gray-600">
-              {slaTier === 'Gold' && location === 'EU' && (
+              {slaTier === 'Gold' && (location === 'Berlin' || location === 'Dresden') && (
                 <span>Gold: Premium support with fastest response times - €30/month</span>
               )}
-              {slaTier === 'Gold' && location === 'US' && (
+              {slaTier === 'Gold' && (location === 'Washington' || location === 'Dallas' || location === 'New York') && (
                 <span>Gold: Premium support with fastest response times - $35/month</span>
               )}
-              {slaTier === 'Silver' && location === 'EU' && (
+              {slaTier === 'Silver' && (location === 'Berlin' || location === 'Dresden') && (
                 <span>Silver: Standard support with good response times - €20/month</span>
               )}
-              {slaTier === 'Silver' && location === 'US' && (
+              {slaTier === 'Silver' && (location === 'Washington' || location === 'Dallas' || location === 'New York') && (
                 <span>Silver: Standard support with good response times - $25/month</span>
               )}
-              {slaTier === 'Bronze' && location === 'EU' && (
+              {slaTier === 'Bronze' && (location === 'Berlin' || location === 'Dresden') && (
                 <span>Bronze: Basic support with standard response times - €10/month</span>
               )}
-              {slaTier === 'Bronze' && location === 'US' && (
+              {slaTier === 'Bronze' && (location === 'Washington' || location === 'Dallas' || location === 'New York') && (
                 <span>Bronze: Basic support with standard response times - $15/month</span>
               )}
             </div>
@@ -278,9 +344,9 @@ export default function HomePage() {
 
         <button
           onClick={handlePurchaseClick}
-          disabled={!location || !productType || !userIdRef.trim()}
+          disabled={!continent || !country || !location || !productType || !userIdRef.trim()}
           className={`w-full px-4 py-2 rounded transition ${
-            location && productType && userIdRef.trim()
+            continent && country && location && productType && userIdRef.trim()
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}

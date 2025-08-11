@@ -46,20 +46,38 @@ export async function POST(req: Request) {
 
     // Add SLA product if selected
     if ((productType === 'SLA' || productType === 'Both') && slaTier && location) {
+      // Extract city name from location format "Continent_Country_City"
+      const cityName = location.split('_')[2] || location;
+      
       const productIdMap: Record<string, Record<string, string>> = {
-        EU: {
-          Bronze: 'prod_Sj8nABZluozK4K',
-          Silver: 'prod_Sj8njJI9kmb4di',
-          Gold: 'prod_Sj8nnl3iCNdqGM',
-        },
-        US: {
+        'Washington': {
           Bronze: 'prod_Sj8LxTwLUfzk5t',
           Silver: 'prod_Sj8Lk6eprBEQ3k',
           Gold: 'prod_Sj8Lt4NDbZzI5i',
         },
+        'Dallas': {
+          Bronze: 'prod_Sj8LxTwLUfzk5t',
+          Silver: 'prod_Sj8Lk6eprBEQ3k',
+          Gold: 'prod_Sj8Lt4NDbZzI5i',
+        },
+        'New York': {
+          Bronze: 'prod_Sj8LxTwLUfzk5t',
+          Silver: 'prod_Sj8Lk6eprBEQ3k',
+          Gold: 'prod_Sj8Lt4NDbZzI5i',
+        },
+        'Berlin': {
+          Bronze: 'prod_Sj8nABZluozK4K',
+          Silver: 'prod_Sj8njJI9kmb4di',
+          Gold: 'prod_Sj8nnl3iCNdqGM',
+        },
+        'Dresden': {
+          Bronze: 'prod_Sj8nABZluozK4K',
+          Silver: 'prod_Sj8njJI9kmb4di',
+          Gold: 'prod_Sj8nnl3iCNdqGM',
+        },
       };
 
-      const productId = productIdMap[location]?.[slaTier];
+      const productId = productIdMap[cityName]?.[slaTier];
       
       if (productId) {
         const prices = await stripe.prices.list({
