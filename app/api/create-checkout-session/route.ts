@@ -6,21 +6,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: Request) {
-  const { ref, location, productType, slaTier, includeSubscription, customerId, paymentMethodId } = await req.json();
-  console.log('create-checkout-session received:', { ref, location, productType, slaTier, includeSubscription, customerId, paymentMethodId });
+  const { ref, location, productType, slaTier, customerId, paymentMethodId } = await req.json();
+  console.log('create-checkout-session received:', { ref, location, productType, slaTier, customerId, paymentMethodId });
   
   const lineItems: any[] = [];
 
-  // Add subscription if selected
-  if (includeSubscription) {
-    lineItems.push({
-      price: 'price_1RTdrCRj81djxho2lPgusn15', // Subscription price ID
-      quantity: 1,
-    });
-  }
-
-  // Add SLA product if selected
-  if ((productType === 'SLA' || productType === 'Both') && slaTier && location) {
+  // Only add products based on the selected product type
+  if (productType === 'SLA' && slaTier && location) {
     // Map location and tier to actual Stripe product IDs
     const productIdMap: Record<string, Record<string, string>> = {
       EU: {
@@ -35,7 +27,15 @@ export async function POST(req: Request) {
       },
     };
 
-    const productId = productIdMap[location]?.[slaTier];
+    // Handle both old and new location formats
+    let region = location;
+    if (location.startsWith('Europe')) {
+      region = 'EU';
+    } else if (location.startsWith('US')) {
+      region = 'US';
+    }
+
+    const productId = productIdMap[region]?.[slaTier];
     
     if (productId) {
       // Find the active price for this product
@@ -54,6 +54,58 @@ export async function POST(req: Request) {
       }
     } else {
       console.error(`Product ID not found for location: ${location}, tier: ${slaTier}`);
+    }
+  } else if (productType === 'Subscription') {
+    // Map subscription products based on location
+    const subscriptionProductMap: Record<string, string> = {
+      'Europe_Germany': 'prod_SewWUEbVwl7dHS',
+      'North America_USA': 'prod_Sqd44yg7CGgQsY',
+    };
+
+    let productId: string | undefined;
+    
+    // Handle location format variations
+    if (location) {
+      // First try exact match
+      productId = subscriptionProductMap[location];
+      
+      // If no exact match, try to extract continent and country
+      if (!productId) {
+        const parts = location.split('_');
+        if (parts.length >= 1) {
+          const continent = parts[0];
+          let country = parts[1] || '';
+          
+          // Handle common variations
+          if (continent === 'North America' && (!country || country === '')) {
+            country = 'USA';
+          } else if (continent === 'Europe' && (!country || country === '')) {
+            country = 'Germany';
+          }
+          
+          const key = `${continent}_${country}`;
+          productId = subscriptionProductMap[key];
+        }
+      }
+    }
+    
+    if (productId) {
+      // Find the active price for this product
+      const prices = await stripe.prices.list({
+        product: productId,
+        active: true,
+      });
+
+      if (prices.data.length > 0) {
+        lineItems.push({
+          price: prices.data[0].id,
+          quantity: 1,
+        });
+      } else {
+        console.error(`Price not found for subscription product: ${productId}`);
+      }
+    } else {
+      console.error(`Subscription product ID not found for location: ${location}`);
     }
   }
 

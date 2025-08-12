@@ -26,3 +26,6 @@ kimicacke 2
 
 openrouter
 PW - j$MQPKZJs3sZNp#
+
+PostgreDB
+PW - j$MQPKZJs3sZNp#

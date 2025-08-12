@@ -93,7 +93,7 @@ export default function CheckoutPage() {
           const productType = urlParams.get('productType');
           const selectedLocation = urlParams.get('location');
           
-          if (selectedTier && selectedLocation && (productType === 'SLA' || productType === 'Both')) {
+          if (selectedTier && selectedLocation && productType === 'SLA') {
             const selectedContinent = selectedLocation.split('_')[0];
             
             // Check for continent-level restriction
@@ -158,7 +158,7 @@ export default function CheckoutPage() {
       const productType = searchParams.get('productType');
       const selectedLocation = searchParams.get('location');
       
-      const isSLAPurchase = selectedTier && (productType === 'SLA' || productType === 'Both');
+      const isSLAPurchase = selectedTier && productType === 'SLA';
       
       if (isSLAPurchase && selectedLocation && slaStatus?.activeSLAs) {
         const selectedContinent = selectedLocation.split('_')[0];
@@ -237,7 +237,6 @@ export default function CheckoutPage() {
       // Redirect to an intermediate page that monitors the status of the signature
       // Get product selection parameters from URL
       const location = searchParams.get('location');
-      const includeSubscription = searchParams.get('includeSubscription');
 
       const params = new URLSearchParams();
       params.set('signatureRequestId', data.signatureRequestId);
@@ -247,7 +246,6 @@ export default function CheckoutPage() {
       if (location) params.set('location', location);
       if (productType) params.set('productType', productType);
       if (selectedTier) params.set('slaTier', selectedTier);
-      if (includeSubscription) params.set('includeSubscription', includeSubscription);
 
       router.push(`/signature-status?${params.toString()}`);
     } catch (err) {
@@ -266,7 +264,7 @@ export default function CheckoutPage() {
     const productType = searchParams.get('productType');
     const selectedLocation = searchParams.get('location');
     
-    if (!selectedTier || !selectedLocation || (productType !== 'SLA' && productType !== 'Both')) {
+    if (!selectedTier || !selectedLocation || productType !== 'SLA') {
       return null;
     }
     
@@ -356,7 +354,7 @@ export default function CheckoutPage() {
         const location = searchParams.get('location');
         
         let selectedText = '';
-        if (selectedTier && location && (productType === 'SLA' || productType === 'Both')) {
+        if (selectedTier && location && productType === 'SLA') {
           const locationParts = location.split('_');
           const continent = locationParts[0] || 'Unknown';
           const country = locationParts[1] || 'Unknown';

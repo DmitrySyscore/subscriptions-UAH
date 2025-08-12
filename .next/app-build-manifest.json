@@ -9,6 +9,66 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
+    ],
+    "/checkout/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/checkout/page.js"
+    ],
+    "/api/check-sla-status/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/check-sla-status/route.js"
+    ],
+    "/api/cancel-subscription/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/cancel-subscription/route.js"
+    ],
+    "/api/yousign/start-signing/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/yousign/start-signing/route.js"
+    ],
+    "/api/stripe/webhook/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/stripe/webhook/route.js"
+    ],
+    "/signature-status/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/signature-status/page.js"
+    ],
+    "/api/yousign/status/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/yousign/status/route.js"
+    ],
+    "/api/payment-methods/[customerId]/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/payment-methods/[customerId]/route.js"
+    ],
+    "/api/create-checkout-session/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/create-checkout-session/route.js"
+    ],
+    "/api/create-subscription-direct/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/create-subscription-direct/route.js"
+    ],
+    "/success/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/success/page.js"
+    ],
+    "/api/invoice/[customerId]/pdf/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/invoice/[customerId]/pdf/route.js"
     ]
   }
 }

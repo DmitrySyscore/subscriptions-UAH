@@ -60,7 +60,6 @@ const handleContinue = async () => {
   const location = searchParams.get('location');
   const productType = searchParams.get('productType');
   const slaTier = searchParams.get('slaTier');
-  const includeSubscription = searchParams.get('includeSubscription') === 'true';
 
   try {
     // If user has selected a saved payment method, create subscription directly
@@ -73,7 +72,6 @@ const handleContinue = async () => {
           location,
           productType,
           slaTier,
-          includeSubscription,
           customerId: userId,
           paymentMethodId: selectedPaymentMethod
         }),
@@ -97,7 +95,6 @@ const handleContinue = async () => {
           location,
           productType,
           slaTier,
-          includeSubscription,
           customerId: userId,
         }),
       });

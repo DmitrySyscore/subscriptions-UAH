@@ -87,9 +87,7 @@ export default function PaymentMethodSelector({ customerId, onPaymentMethodSelec
       const productType = urlParams.get('productType') || 'Subscription';
       const slaTier = urlParams.get('slaTier') || '';
       
-      // Only include subscription if explicitly requested
-      // When productType is 'SLA', subscription should not be included
-      const includeSubscription = productType === 'Subscription' || productType === 'Both' || urlParams.get('includeSubscription') === 'true';
+      // Subscription is always included based on productType selection
 
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
@@ -102,7 +100,6 @@ export default function PaymentMethodSelector({ customerId, onPaymentMethodSelec
           location,
           productType,
           slaTier,
-          includeSubscription,
         }),
       });
 
