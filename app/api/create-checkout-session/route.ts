@@ -55,19 +55,26 @@ export async function POST(req: Request) {
     } else {
       console.error(`Product ID not found for location: ${location}, tier: ${slaTier}`);
     }
-  } else if (productType === 'Subscription') {
-    // Map subscription products based on location
+  } else if (productType === 'Subscription' || productType === 'Product presentation service') {
+    // Map subscription and product presentation service products based on location
     const subscriptionProductMap: Record<string, string> = {
       'Europe_Germany': 'prod_SewWUEbVwl7dHS',
       'North America_USA': 'prod_Sqd44yg7CGgQsY',
     };
+
+    const productPresentationServiceMap: Record<string, string> = {
+      'Europe_Germany': 'prod_StDZUp65e8VNOO',
+      'North America_USA': 'prod_StDKJvCffE3Nmj',
+    };
+
+    const productMap = productType === 'Subscription' ? subscriptionProductMap : productPresentationServiceMap;
 
     let productId: string | undefined;
     
     // Handle location format variations
     if (location) {
       // First try exact match
-      productId = subscriptionProductMap[location];
+      productId = productMap[location];
       
       // If no exact match, try to extract continent and country
       if (!productId) {
@@ -84,7 +91,7 @@ export async function POST(req: Request) {
           }
           
           const key = `${continent}_${country}`;
-          productId = subscriptionProductMap[key];
+          productId = productMap[key];
         }
       }
     }

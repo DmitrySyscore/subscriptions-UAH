@@ -1,6 +1,5 @@
 {
-  "/page": "app/page.js",
+  "/api/check-all-subscriptions/route": "app/api/check-all-subscriptions/route.js",
   "/checkout/page": "app/checkout/page.js",
-  "/signature-status/page": "app/signature-status/page.js",
-  "/success/page": "app/success/page.js"
+  "/page": "app/page.js"
 }

@@ -3,11 +3,9 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-interface SLAStatus {
-  hasActiveSLA: boolean;
-  tier?: string;
-  location?: string;
-  subscriptionId?: string;
+interface AllSubscriptionsStatus {
+  hasActiveSubscriptions: boolean;
+  customerId?: string;
   activeSLAs?: Array<{
     subscriptionId: string;
     productId: string;
@@ -15,6 +13,21 @@ interface SLAStatus {
     slaTier: string;
     location: string;
   }>;
+  activeSubscriptions?: Array<{
+    subscriptionId: string;
+    productId: string;
+    productName: string;
+    location: string;
+    serviceType: string;
+  }>;
+  activeProductPresentations?: Array<{
+    subscriptionId: string;
+    productId: string;
+    productName: string;
+    location: string;
+    serviceType: string;
+  }>;
+  totalActiveSubscriptions?: number;
 }
 
 export default function CheckoutPage() {
@@ -24,9 +37,9 @@ export default function CheckoutPage() {
   const [signerFirstName, setSignerFirstName] = useState('');
   const [signerLastName, setSignerLastName] = useState('');
   const [signerEmail, setSignerEmail] = useState('');
-  const [slaStatus, setSlaStatus] = useState<SLAStatus | null>(null);
-  const [checkingSLA, setCheckingSLA] = useState(false);
-  const [slaError, setSlaError] = useState<string | null>(null);
+  const [subscriptionsStatus, setSubscriptionsStatus] = useState<AllSubscriptionsStatus | null>(null);
+  const [checkingSubscriptions, setCheckingSubscriptions] = useState(false);
+  const [subscriptionsError, setSubscriptionsError] = useState<string | null>(null);
   const [tierError, setTierError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationConflict, setLocationConflict] = useState<string | null>(null);
@@ -60,123 +73,149 @@ export default function CheckoutPage() {
   }, [ref]);
 
   useEffect(() => {
-    const checkSLAStatus = async () => {
+    const checkAllSubscriptions = async () => {
       if (!userId) {
-        setSlaStatus(null);
-        setSlaError(null);
+        setSubscriptionsStatus(null);
+        setSubscriptionsError(null);
         setTierError(null);
         setLocationConflict(null);
         return;
       }
 
-      setCheckingSLA(true);
-      setSlaError(null);
+      setCheckingSubscriptions(true);
+      setSubscriptionsError(null);
       setTierError(null);
       setLocationConflict(null);
 
       try {
-        const res = await fetch(`/api/check-sla-status?userId=${encodeURIComponent(userId)}`);
+        const res = await fetch(`/api/check-all-subscriptions?userId=${encodeURIComponent(userId)}`);
         const data = await res.json();
 
         if (res.ok) {
-          setSlaStatus({
-            hasActiveSLA: data.hasActiveSLA,
-            tier: data.slaTier,
-            location: data.location,
-            subscriptionId: data.subscriptionId,
-            activeSLAs: data.activeSLAs || []
-          });
+          setSubscriptionsStatus(data);
 
           // Check for location-based conflicts
-          const urlParams = new URLSearchParams(window.location.search);
-          const selectedTier = urlParams.get('slaTier');
-          const productType = urlParams.get('productType');
-          const selectedLocation = urlParams.get('location');
+          const selectedTier = searchParams.get('slaTier');
+          const productType = searchParams.get('productType');
+          const selectedLocation = searchParams.get('location');
           
-          if (selectedTier && selectedLocation && productType === 'SLA') {
+          if (selectedLocation) {
             const selectedContinent = selectedLocation.split('_')[0];
             
-            // Check for continent-level restriction
+            // Check for continent-level restriction across all service types
+            const allActiveServices = [
+              ...(data.activeSLAs || []),
+              ...(data.activeSubscriptions || []),
+              ...(data.activeProductPresentations || [])
+            ];
+            
             const existingContinents = new Set(
-              data.activeSLAs?.map((sla: any) => sla.location.split('_')[0]) || []
+              allActiveServices.map((service: any) => service.location.split('_')[0])
             );
             
-            if (existingContinents.has(selectedContinent)) {
-              // Allow same continent purchases
-            } else if (data.activeSLAs && data.activeSLAs.length > 0) {
-              // Prevent cross-continent purchases
-              const existingContinent = data.activeSLAs[0].location.split('_')[0];
-              setLocationConflict(`You already have an active SLA subscription in ${existingContinent}. You cannot purchase an SLA in a different continent (${selectedContinent}).`);
+            // Prevent cross-continent purchases for any service type
+            if (existingContinents.size > 0 && !existingContinents.has(selectedContinent)) {
+              const existingContinent = Array.from(existingContinents)[0];
+              setLocationConflict(`You already have active services in ${existingContinent}. You cannot purchase services in a different continent (${selectedContinent}).`);
+              return;
             }
 
-            // Check for existing SLA at same location with same tier
-            const existingSLA = data.activeSLAs?.find(
-              (sla: any) => sla.location === selectedLocation &&
-                           sla.slaTier.toLowerCase() === selectedTier.toLowerCase()
-            );
+            // SLA-specific checks
+            if (selectedTier && productType === 'SLA') {
+              // Check for existing SLA at same location with same tier
+              const existingSLA = data.activeSLAs?.find(
+                (sla: any) => sla.location === selectedLocation &&
+                             sla.slaTier.toLowerCase() === selectedTier.toLowerCase()
+              );
 
-            if (existingSLA) {
-              setLocationConflict(`You already have a ${selectedTier} SLA subscription at this location. You can only upgrade to a higher tier.`);
+              if (existingSLA) {
+                setLocationConflict(`You already have a ${selectedTier} SLA subscription at this location. You can only upgrade to a higher tier.`);
+                return;
+              }
+
+              // Check for tier upgrades
+              const existingAtLocation = data.activeSLAs?.find(
+                (sla: any) => sla.location === selectedLocation
+              );
+
+              if (existingAtLocation) {
+                const currentTierLevel = getTierLevel(existingAtLocation.slaTier);
+                const selectedTierLevel = getTierLevel(selectedTier);
+                
+                if (selectedTierLevel <= currentTierLevel) {
+                  setLocationConflict(`You already have a ${existingAtLocation.slaTier} SLA at this location. You can only upgrade to a higher tier.`);
+                  return;
+                }
+              }
             }
 
-            // Check for tier upgrades
-            const existingAtLocation = data.activeSLAs?.find(
-              (sla: any) => sla.location === selectedLocation
-            );
-
-            if (existingAtLocation) {
-              const currentTierLevel = getTierLevel(existingAtLocation.slaTier);
-              const selectedTierLevel = getTierLevel(selectedTier);
+            // Check for duplicate subscriptions at same location
+            if (productType === 'Subscription') {
+              const existingSubscription = data.activeSubscriptions?.find(
+                (sub: any) => sub.location === selectedLocation
+              );
               
-              if (selectedTierLevel <= currentTierLevel) {
-                setLocationConflict(`You already have a ${existingAtLocation.slaTier} SLA at this location. You can only upgrade to a higher tier.`);
+              if (existingSubscription) {
+                setLocationConflict(`You already have a subscription service at this location.`);
+                return;
+              }
+            }
+
+            // Check for duplicate product presentations at same location
+            if (productType === 'Product presentation service') {
+              const existingPresentation = data.activeProductPresentations?.find(
+                (pres: any) => pres.location === selectedLocation
+              );
+              
+              if (existingPresentation) {
+                setLocationConflict(`You already have a product presentation service at this location.`);
+                return;
               }
             }
           }
         } else {
-          setSlaError(data.error || 'Failed to check SLA status');
-          setSlaStatus(null);
+          setSubscriptionsError(data.error || 'Failed to check subscriptions status');
+          setSubscriptionsStatus(null);
         }
       } catch (error) {
-        console.error('Error checking SLA status:', error);
-        setSlaError('Failed to check SLA status');
-        setSlaStatus(null);
+        console.error('Error checking subscriptions status:', error);
+        setSubscriptionsError('Failed to check subscriptions status');
+        setSubscriptionsStatus(null);
       } finally {
-        setCheckingSLA(false);
+        setCheckingSubscriptions(false);
       }
     };
 
-    checkSLAStatus();
-  }, [userId]);
+    checkAllSubscriptions();
+  }, [userId, searchParams]);
 
   const handleCheckout = async () => {
     setLoading(true);
     
     try {
-      const searchParams = new URLSearchParams(window.location.search);
       const selectedTier = searchParams.get('slaTier');
       const productType = searchParams.get('productType');
       const selectedLocation = searchParams.get('location');
       
       const isSLAPurchase = selectedTier && productType === 'SLA';
       
-      if (isSLAPurchase && selectedLocation && slaStatus?.activeSLAs) {
+      if (isSLAPurchase && selectedLocation && subscriptionsStatus?.activeSLAs) {
         const selectedContinent = selectedLocation.split('_')[0];
         
         // Check for continent-level restriction
         const existingContinents = new Set(
-          slaStatus.activeSLAs.map(sla => sla.location.split('_')[0])
+          subscriptionsStatus.activeSLAs.map(sla => sla.location.split('_')[0])
         );
         
-        if (!existingContinents.has(selectedContinent) && slaStatus.activeSLAs.length > 0) {
-          const existingContinent = slaStatus.activeSLAs[0].location.split('_')[0];
+        if (!existingContinents.has(selectedContinent) && subscriptionsStatus.activeSLAs.length > 0) {
+          const existingContinent = subscriptionsStatus.activeSLAs[0].location.split('_')[0];
           alert(`You already have an active SLA subscription in ${existingContinent}. You cannot purchase an SLA in a different continent (${selectedContinent}).`);
           setLoading(false);
           return;
         }
 
         // Find existing SLA at the same location
-        const existingSLA = slaStatus.activeSLAs.find(
+        const existingSLA = subscriptionsStatus.activeSLAs.find(
           sla => sla.location === selectedLocation
         );
 
@@ -207,7 +246,37 @@ export default function CheckoutPage() {
               setLoading(false);
               return;
             }
+          } else if (selectedTierLevel <= currentTierLevel) {
+            alert(`You already have a ${existingSLA.slaTier} SLA at this location. You can only upgrade to a higher tier.`);
+            setLoading(false);
+            return;
           }
+        }
+      }
+
+      // Check for duplicate subscription services
+      if (productType === 'Subscription' && subscriptionsStatus?.activeSubscriptions) {
+        const existingSubscription = subscriptionsStatus.activeSubscriptions.find(
+          sub => sub.location === selectedLocation
+        );
+        
+        if (existingSubscription) {
+          alert(`You already have a subscription service at this location.`);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Check for duplicate product presentations
+      if (productType === 'Product presentation service' && subscriptionsStatus?.activeProductPresentations) {
+        const existingPresentation = subscriptionsStatus.activeProductPresentations.find(
+          pres => pres.location === selectedLocation
+        );
+        
+        if (existingPresentation) {
+          alert(`You already have a product presentation service at this location.`);
+          setLoading(false);
+          return;
         }
       }
 
@@ -231,7 +300,11 @@ export default function CheckoutPage() {
         setLoading(false);
         return;
       }
-      localStorage.setItem('referrer', ref || '');
+      
+      // Only access localStorage on client side
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('referrer', ref || '');
+      }
       console.log('referrer from app\checkout\page.tsx', ref);
 
       // Redirect to an intermediate page that monitors the status of the signature
@@ -257,9 +330,8 @@ export default function CheckoutPage() {
   };
 
   const getUpgradeInfo = () => {
-    if (!slaStatus?.activeSLAs || slaStatus.activeSLAs.length === 0) return null;
+    if (!subscriptionsStatus?.activeSLAs || subscriptionsStatus.activeSLAs.length === 0) return null;
     
-    const searchParams = new URLSearchParams(window.location.search);
     const selectedTier = searchParams.get('slaTier');
     const productType = searchParams.get('productType');
     const selectedLocation = searchParams.get('location');
@@ -269,7 +341,7 @@ export default function CheckoutPage() {
     }
     
     // Find existing SLA at the same location
-    const existingSLA = slaStatus.activeSLAs.find(
+    const existingSLA = subscriptionsStatus.activeSLAs.find(
       sla => sla.location === selectedLocation
     );
     
@@ -286,7 +358,8 @@ export default function CheckoutPage() {
         };
       }
     }
-    
+    ///
+
     return null;
   };
 
@@ -348,28 +421,34 @@ export default function CheckoutPage() {
 
       {/* Subscription Information */}
       {(() => {
-        const searchParams = new URLSearchParams(window.location.search);
         const selectedTier = searchParams.get('slaTier');
         const productType = searchParams.get('productType');
         const location = searchParams.get('location');
         
         let selectedText = '';
-        if (selectedTier && location && productType === 'SLA') {
+        if (location) {
           const locationParts = location.split('_');
           const continent = locationParts[0] || 'Unknown';
           const country = locationParts[1] || 'Unknown';
           const city = locationParts[2] || 'Unknown';
-          selectedText = `${selectedTier} SLA - ${continent}, ${country}, ${city}`;
+          
+          if (productType === 'SLA' && selectedTier) {
+            selectedText = `${selectedTier} SLA Service - ${continent}, ${country}, ${city}`;
+          } else if (productType === 'Subscription') {
+            selectedText = `Subscription Service - ${continent}`;
+          } else if (productType === 'Product presentation service') {
+            selectedText = `Product Presentation Service - ${continent}, ${country}, ${city}`;
+          }
         }
 
         return (
           <>
-            {/* Display all active subscriptions */}
-            {slaStatus?.activeSLAs && slaStatus.activeSLAs.length > 0 && (
+            {/* Display all active SLA's */}
+            {subscriptionsStatus?.activeSLAs && subscriptionsStatus.activeSLAs.length > 0 && (
               <div className="mb-4">
-                <h3 className="text-sm font-semibold mb-2 text-blue-600">Active Subscriptions:</h3>
+                <h3 className="text-sm font-semibold mb-2 text-blue-600">Active SLA Subscriptions:</h3>
                 <div className="space-y-1">
-                  {slaStatus.activeSLAs.map((sla, index) => {
+                  {subscriptionsStatus.activeSLAs.map((sla, index) => {
                     const locationParts = sla.location.split('_');
                     const continent = locationParts[0] || 'Unknown';
                     const country = locationParts[1] || 'Unknown';
@@ -377,9 +456,49 @@ export default function CheckoutPage() {
                     
                     return (
                       <div key={index} className="text-sm text-blue-600">
-                        {sla.slaTier} SLA - {continent}, {country}, {city}
+                        -- {sla.slaTier} SLA - {continent}, {country}, {city}
                       </div>
-                    ); 
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Display active Subscription services */}
+            {subscriptionsStatus?.activeSubscriptions && subscriptionsStatus.activeSubscriptions.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold mb-2 text-green-600">Active Subscription Services:</h3>
+                <div className="space-y-1">
+                  {subscriptionsStatus.activeSubscriptions.map((subscription, index) => {
+                    const locationParts = subscription.location.split('_');
+                    const continent = locationParts[0] || 'Unknown';
+                    
+                    return (
+                      <div key={index} className="text-sm text-green-600">
+                        -- {subscription.productName} - {continent}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Display active Product Presentation services */}
+            {subscriptionsStatus?.activeProductPresentations && subscriptionsStatus.activeProductPresentations.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold mb-2 text-purple-600">Active Product Presentation Services:</h3>
+                <div className="space-y-1">
+                  {subscriptionsStatus.activeProductPresentations.map((service, index) => {
+                    const locationParts = service.location.split('_');
+                    const continent = locationParts[0] || 'Unknown';
+                    const country = locationParts[1] || 'Unknown';
+                    const city = locationParts[2] || 'Unknown';
+                    
+                    return (
+                      <div key={index} className="text-sm text-purple-600">
+                        -- {service.productName} - {continent}, {country}, {city}
+                      </div>
+                    );
                   })}
                 </div>
               </div>

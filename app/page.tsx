@@ -42,11 +42,13 @@ export default function HomePage() {
       params.set('ref', ref.trim());
     }
     
-    if (location) {
-      const formattedLocation = `${continent}_${country}_${location}`;
+    if (productType === 'Subscription') {
+      // For subscription service, use continent and default country
+      const defaultCountry = continent === 'North America' ? 'USA' : 'Germany';
+      const formattedLocation = `${continent}_${defaultCountry}`;
       params.set('location', formattedLocation);
-    } else if (productType === 'Subscription') {
-      const formattedLocation = `${continent}_${country}`;
+    } else if (location) {
+      const formattedLocation = `${continent}_${country}_${location}`;
       params.set('location', formattedLocation);
     }
     
@@ -97,11 +99,13 @@ export default function HomePage() {
       params.set('userId', userIdRef.trim());
     }
     
-    if (location) {
-      const formattedLocation = `${continent}_${country}_${location}`;
+    if (productType === 'Subscription') {
+      // For subscription service, use continent and default country
+      const defaultCountry = continent === 'North America' ? 'USA' : 'Germany';
+      const formattedLocation = `${continent}_${defaultCountry}`;
       params.set('location', formattedLocation);
-    } else if (productType === 'Subscription') {
-      const formattedLocation = `${continent}_${country}`;
+    } else if (location) {
+      const formattedLocation = `${continent}_${country}_${location}`;
       params.set('location', formattedLocation);
     }
     
@@ -117,11 +121,6 @@ export default function HomePage() {
     
     router.push(`/checkout?${params.toString()}`);
   };
-
-
- // const isRegistrationEnabled = productType &&
-   // (productType !== 'SLA' || slaTier) &&
-   // continent;
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen p-6 bg-gray-50 space-y-6">
@@ -156,6 +155,7 @@ export default function HomePage() {
             <option value="">Select product type</option>
             <option value="Subscription">Subscription</option>
             <option value="SLA">SLA</option>
+            <option value="Product presentation service">Product presentation service</option>
           </select>
         </div>
 
@@ -199,8 +199,6 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Subscription checkbox removed - subscription is now handled automatically */}
-
         {productType && (
           <>
             <div>
@@ -225,75 +223,64 @@ export default function HomePage() {
               </select>
             </div>
 
-            {continent && (
-              <div>
-                <label htmlFor="countrySelect" className="block text-gray-700 mb-2">
-                  Select country *
-                </label>
-                <select
-                  id="countrySelect"
-                  value={country}
-                  onChange={(e) => {
-                    setCountry(e.target.value);
-                    setLocation('');
-                  }}
-                  className="w-full px-4 py-2 border border-gray-300 rounded"
-                  required
-                  disabled={!continent}
-                >
-                  {productType === 'Subscription' ? (
-                    <>
-                      {continent === 'North America' && (
-                        <option value="USA">USA</option>
-                      )}
-                      {continent === 'Europe' && (
-                        <option value="Germany">Germany</option>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <option value="">Select country</option>
-                      {continent === 'North America' && (
-                        <option value="USA">USA</option>
-                      )}
-                      {continent === 'Europe' && (
-                        <option value="Germany">Germany</option>
-                      )}
-                    </>
-                  )}
-                </select>
-              </div>
-            )}
+            {continent && productType !== 'Subscription' && (
+              <>
+                <div>
+                  <label htmlFor="countrySelect" className="block text-gray-700 mb-2">
+                    Select country *
+                  </label>
+                  <select
+                    id="countrySelect"
+                    value={country}
+                    onChange={(e) => {
+                      setCountry(e.target.value);
+                      setLocation('');
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded"
+                    required
+                    disabled={!continent}
+                  >
+                    <option value="">Select country</option>
+                    {continent === 'North America' && (
+                      <option value="USA">USA</option>
+                    )}
+                    {continent === 'Europe' && (
+                      <option value="Germany">Germany</option>
+                    )}
+                  </select>
+                </div>
 
-            {country && (
-              <div>
-                <label htmlFor="locationSelect" className="block text-gray-700 mb-2">
-                  Select location {productType !== 'Subscription' && '*'}
-                </label>
-                <select
-                  id="locationSelect"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded"
-                  required={productType !== 'Subscription'}
-                  disabled={!country}
-                >
-                  <option value="">Select location</option>
-                  {country === 'USA' && (
-                    <>
-                      <option value="Washington">Washington</option>
-                      <option value="Dallas">Dallas</option>
-                      <option value="New York">New York</option>
-                    </>
-                  )}
-                  {country === 'Germany' && (
-                    <>
-                      <option value="Berlin">Berlin</option>
-                      <option value="Dresden">Dresden</option>
-                    </>
-                  )}
-                </select>
-              </div>
+                {country && (
+                  <div>
+                    <label htmlFor="locationSelect" className="block text-gray-700 mb-2">
+                      Select location *
+                    </label>
+                    <select
+                      id="locationSelect"
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded"
+                      required
+                      disabled={!country}
+                    >
+                      <option value="">Select location</option>
+                      {country === 'USA' && (
+                        <>
+                          <option value="Washington">Washington</option>
+                          <option value="Dallas">Dallas</option>
+                          <option value="New York">New York</option>
+                        </>
+                      )}
+                      {country === 'Germany' && (
+                        <>
+                          <option value="Berlin">Berlin</option>
+                          <option value="Dresden">Dresden</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -312,12 +299,9 @@ export default function HomePage() {
 
         <button
           onClick={handleRegisterClick}
-          //disabled={!isRegistrationEnabled}
-                    disabled={!continent || !productType || (productType !== 'Subscription' && !location)}
-
+          disabled={!continent || !productType || (productType !== 'Subscription' && !location)}
           className={`w-full px-4 py-2 rounded transition ${
-            //isRegistrationEnabled
-            continent && country && productType && (productType === 'Subscription' || location)
+            continent && productType && (productType === 'Subscription' || (country && location))
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
@@ -354,7 +338,7 @@ export default function HomePage() {
           onClick={handlePurchaseClick}
           disabled={!continent || !productType || !userIdRef.trim() || (productType !== 'Subscription' && !location)}
           className={`w-full px-4 py-2 rounded transition ${
-            continent && country && productType && userIdRef.trim() && (productType === 'Subscription' || location)
+            continent && productType && userIdRef.trim() && (productType === 'Subscription' || (country && location))
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
