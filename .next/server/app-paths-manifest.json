@@ -1,5 +1,5 @@
 {
   "/api/check-all-subscriptions/route": "app/api/check-all-subscriptions/route.js",
-  "/checkout/page": "app/checkout/page.js",
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/checkout/page": "app/checkout/page.js"
 }

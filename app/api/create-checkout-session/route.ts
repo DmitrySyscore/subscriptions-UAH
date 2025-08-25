@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     } else {
       console.error(`Product ID not found for location: ${location}, tier: ${slaTier}`);
     }
-  } else if (productType === 'Subscription' || productType === 'Product presentation service') {
+  } else if (productType === 'Subscription' || productType === 'Product presentation service' || productType === 'Market Agent') {
     // Map subscription and product presentation service products based on location
     const subscriptionProductMap: Record<string, string> = {
       'Europe_Germany': 'prod_SewWUEbVwl7dHS',
@@ -67,7 +67,19 @@ export async function POST(req: Request) {
       'North America_USA': 'prod_StDKJvCffE3Nmj',
     };
 
-    const productMap = productType === 'Subscription' ? subscriptionProductMap : productPresentationServiceMap;
+    const marketAgentProductMap: Record<string, string> = {
+      'Europe_Germany': 'prod_SuLPx96qTJOODr',
+      'North America_USA': 'prod_SuLPE2lEtex0fC',
+    };
+
+    let productMap: Record<string, string>;
+    if (productType === 'Subscription') {
+      productMap = subscriptionProductMap;
+    } else if (productType === 'Product presentation service') {
+      productMap = productPresentationServiceMap;
+    } else {
+      productMap = marketAgentProductMap;
+    }
 
     let productId: string | undefined;
     

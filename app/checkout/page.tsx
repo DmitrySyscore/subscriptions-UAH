@@ -27,6 +27,13 @@ interface AllSubscriptionsStatus {
     location: string;
     serviceType: string;
   }>;
+  activeMarketAgents?: Array<{
+    subscriptionId: string;
+    productId: string;
+    productName: string;
+    location: string;
+    serviceType: string;
+  }>;
   totalActiveSubscriptions?: number;
 }
 
@@ -57,7 +64,7 @@ export default function CheckoutPage() {
       try {
         const res = await fetch(`/api/user-by-stripe-id?stripeId=${ref}`);
         const data = await res.json();
-
+        
         if (res.ok && data?.name) {
           setInviterName(data.name);
         } else {
@@ -89,7 +96,7 @@ export default function CheckoutPage() {
 
       try {
         const res = await fetch(`/api/check-all-subscriptions?userId=${encodeURIComponent(userId)}`);
-        const data = await res.json();
+        const data = await res.json();     
 
         if (res.ok) {
           setSubscriptionsStatus(data);
@@ -149,14 +156,24 @@ export default function CheckoutPage() {
               }
             }
 
+
             // Check for duplicate subscriptions at same location
             if (productType === 'Subscription') {
               const existingSubscription = data.activeSubscriptions?.find(
                 (sub: any) => sub.location === selectedLocation
               );
-              
               if (existingSubscription) {
-                setLocationConflict(`You already have a subscription service at this location.`);
+                setLocationConflict(`You already have a ${existingSubscription.productName} at this location.`);
+                return;
+              }
+
+              // Check for Market Agents at same location
+              const existingMarketAgent = data.activeMarketAgents?.find(
+                (agent: any) => agent.location === selectedLocation
+              );
+
+              if (existingMarketAgent) {
+                setLocationConflict(`You already have Active Subscription at this location.`);
                 return;
               }
             }
@@ -168,7 +185,29 @@ export default function CheckoutPage() {
               );
               
               if (existingPresentation) {
-                setLocationConflict(`You already have a product presentation service at this location.`);
+                setLocationConflict(`You already have a ${existingPresentation.productName}  at this location.`);
+                return;
+              }
+            }
+
+            // Check for duplicate Market Agents at same location
+            if (productType === 'Market Agent') {
+              const existingMarketAgent = data.activeMarketAgents?.find(
+                (agent: any) => agent.location === selectedLocation
+              );
+
+              if (existingMarketAgent) {
+                setLocationConflict(`You already have a ${existingMarketAgent.productName} at this location.`);
+                return;
+              }
+
+              // Check for Subscription services at same location
+              const existingSubscription = data.activeSubscriptions?.find(
+                (sub: any) => sub.location === selectedLocation
+              );
+
+              if (existingSubscription) {
+                setLocationConflict(`You already have a subscription service at this location.`);
                 return;
               }
             }
@@ -254,29 +293,73 @@ export default function CheckoutPage() {
         }
       }
 
-      // Check for duplicate subscription services
-      if (productType === 'Subscription' && subscriptionsStatus?.activeSubscriptions) {
-        const existingSubscription = subscriptionsStatus.activeSubscriptions.find(
-          sub => sub.location === selectedLocation
+      // Comprehensive duplicate entry check for Location restrictions
+      if (selectedLocation) {
+        const allActiveServices = [
+          ...(subscriptionsStatus?.activeSLAs || []),
+          ...(subscriptionsStatus?.activeSubscriptions || []),
+          ...(subscriptionsStatus?.activeProductPresentations || []),
+          ...(subscriptionsStatus?.activeMarketAgents || [])
+        ];
+
+        // Check for any existing service at the same location
+        const existingService = allActiveServices.find(
+          service => service.location === selectedLocation
         );
-        
-        if (existingSubscription) {
-          alert(`You already have a subscription service at this location.`);
+
+        if (existingService) {
+          let serviceType = '';
+          if (subscriptionsStatus?.activeSLAs?.some(sla => sla.location === selectedLocation)) {
+            serviceType = 'SLA';
+          } else if (subscriptionsStatus?.activeSubscriptions?.some(sub => sub.location === selectedLocation)) {
+            serviceType = 'Subscription service';
+          } else if (subscriptionsStatus?.activeProductPresentations?.some(pres => pres.location === selectedLocation)) {
+            serviceType = 'Product presentation service';
+          } else if (subscriptionsStatus?.activeMarketAgents?.some(agent => agent.location === selectedLocation)) {
+            serviceType = 'Market Agent service';
+          }
+
+          alert(`You already have a ${serviceType} at this location. You cannot purchase additional services at the same location.`);
           setLoading(false);
           return;
         }
-      }
 
-      // Check for duplicate product presentations
-      if (productType === 'Product presentation service' && subscriptionsStatus?.activeProductPresentations) {
-        const existingPresentation = subscriptionsStatus.activeProductPresentations.find(
-          pres => pres.location === selectedLocation
-        );
-        
-        if (existingPresentation) {
-          alert(`You already have a product presentation service at this location.`);
-          setLoading(false);
-          return;
+        // Additional specific checks for each service type
+        if (productType === 'Subscription') {
+          // Already handled by the general check above, but keeping for explicit messaging
+          const existingSubscription = subscriptionsStatus?.activeSubscriptions?.find(
+            sub => sub.location === selectedLocation
+          );
+          
+          if (existingSubscription) {
+            alert(`You already have a subscription service at this location.`);
+            setLoading(false);
+            return;
+          }
+        }
+
+        if (productType === 'Product presentation service') {
+          const existingPresentation = subscriptionsStatus?.activeProductPresentations?.find(
+            pres => pres.location === selectedLocation
+          );
+          
+          if (existingPresentation) {
+            alert(`You already have a product presentation service at this location.`);
+            setLoading(false);
+            return;
+          }
+        }
+
+        if (productType === 'Market Agent') {
+          const existingMarketAgent = subscriptionsStatus?.activeMarketAgents?.find(
+            agent => agent.location === selectedLocation
+          );
+
+          if (existingMarketAgent) {
+            alert(`You already have a Market Agent service at this location.`);
+            setLoading(false);
+            return;
+          }
         }
       }
 
@@ -292,6 +375,11 @@ export default function CheckoutPage() {
       });
       
       console.log ('app\checkout\page.tsx body', JSON.stringify({ ref, signerFirstName, signerLastName }));
+        
+      
+
+
+
 
       const data = await res.json();
 
@@ -438,6 +526,8 @@ export default function CheckoutPage() {
             selectedText = `Subscription Service - ${continent}`;
           } else if (productType === 'Product presentation service') {
             selectedText = `Product Presentation Service - ${continent}, ${country}, ${city}`;
+          } else if (productType === 'Market Agent') {
+            selectedText = `Market Agent - ${continent}`;
           }
         }
 
@@ -497,6 +587,25 @@ export default function CheckoutPage() {
                     return (
                       <div key={index} className="text-sm text-purple-600">
                         -- {service.productName} - {continent}, {country}, {city}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Display active Market Agent services */}
+            {subscriptionsStatus?.activeMarketAgents && subscriptionsStatus.activeMarketAgents.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold mb-2 text-orange-600">Active Market Agent Services:</h3>
+                <div className="space-y-1">
+                  {subscriptionsStatus.activeMarketAgents.map((agent, index) => {
+                    const locationParts = agent.location.split('_');
+                    const continent = locationParts[0] || 'Unknown';
+                    
+                    return (
+                      <div key={index} className="text-sm text-orange-600">
+                        -- {agent.productName} - {continent}
                       </div>
                     );
                   })}
