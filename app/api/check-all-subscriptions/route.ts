@@ -28,6 +28,11 @@ const PRODUCT_PRESENTATION_SERVICE_PRODUCTS = [
   'prod_StDKJvCffE3Nmj', // North America_USA
 ];
 
+const MARKET_AGENT_PRODUCTS = [
+  'prod_SuLPx96qTJOODr', // Europe_Germany
+  'prod_SuLPE2lEtex0fC', // North America_USA
+];
+
 function isValidProduct(product: any): product is Stripe.Product {
   return product && typeof product === 'object' && !product.deleted && 'id' in product;
 }
@@ -70,6 +75,7 @@ export async function GET(req: NextRequest) {
     const activeSLAs = [];
     const activeSubscriptions = [];
     const activeProductPresentations = [];
+    const activeMarketAgents = [];
 
     for (const subscription of subscriptions.data) {
       for (const item of subscription.items.data) {
@@ -113,6 +119,11 @@ export async function GET(req: NextRequest) {
             ...subscriptionData,
             serviceType: 'Product Presentation Service',
           });
+        } else if (MARKET_AGENT_PRODUCTS.includes(productIdFromPrice)) {
+          activeMarketAgents.push({
+            ...subscriptionData,
+            serviceType: 'Market Agent',
+          });
         }
       }
     }
@@ -123,6 +134,7 @@ export async function GET(req: NextRequest) {
       activeSLAs,
       activeSubscriptions,
       activeProductPresentations,
+      activeMarketAgents,
       totalActiveSubscriptions: subscriptions.data.length,
     });
 

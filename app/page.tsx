@@ -42,8 +42,8 @@ export default function HomePage() {
       params.set('ref', ref.trim());
     }
     
-    if (productType === 'Subscription') {
-      // For subscription service, use continent and default country
+    if (productType === 'Subscription' || productType === 'Market Agent') {
+      // For subscription service and Market Agent, use continent and default country
       const defaultCountry = continent === 'North America' ? 'USA' : 'Germany';
       const formattedLocation = `${continent}_${defaultCountry}`;
       params.set('location', formattedLocation);
@@ -99,8 +99,8 @@ export default function HomePage() {
       params.set('userId', userIdRef.trim());
     }
     
-    if (productType === 'Subscription') {
-      // For subscription service, use continent and default country
+    if (productType === 'Subscription' || productType === 'Market Agent') {
+      // For subscription service and Market Agent, use continent and default country
       const defaultCountry = continent === 'North America' ? 'USA' : 'Germany';
       const formattedLocation = `${continent}_${defaultCountry}`;
       params.set('location', formattedLocation);
@@ -156,6 +156,7 @@ export default function HomePage() {
             <option value="Subscription">Subscription</option>
             <option value="SLA">SLA</option>
             <option value="Product presentation service">Product presentation service</option>
+            <option value="Market Agent">Market Agent</option>
           </select>
         </div>
 
@@ -223,7 +224,7 @@ export default function HomePage() {
               </select>
             </div>
 
-            {continent && productType !== 'Subscription' && (
+            {continent && productType !== 'Subscription' && productType !== 'Market Agent' && (
               <>
                 <div>
                   <label htmlFor="countrySelect" className="block text-gray-700 mb-2">
@@ -299,9 +300,9 @@ export default function HomePage() {
 
         <button
           onClick={handleRegisterClick}
-          disabled={!continent || !productType || (productType !== 'Subscription' && !location)}
+          disabled={!continent || !productType || (productType !== 'Subscription' && productType !== 'Market Agent' && !location)}
           className={`w-full px-4 py-2 rounded transition ${
-            continent && productType && (productType === 'Subscription' || (country && location))
+            continent && productType && (productType === 'Subscription' || productType === 'Market Agent' || (country && location))
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
@@ -336,9 +337,9 @@ export default function HomePage() {
 
         <button
           onClick={handlePurchaseClick}
-          disabled={!continent || !productType || !userIdRef.trim() || (productType !== 'Subscription' && !location)}
+          disabled={!continent || !productType || !userIdRef.trim() || (productType !== 'Subscription' && productType !== 'Market Agent' && !location)}
           className={`w-full px-4 py-2 rounded transition ${
-            continent && productType && userIdRef.trim() && (productType === 'Subscription' || (country && location))
+            continent && productType && userIdRef.trim() && (productType === 'Subscription' || productType === 'Market Agent' || (country && location))
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}

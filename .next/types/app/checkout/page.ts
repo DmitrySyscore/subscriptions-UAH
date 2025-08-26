@@ -1,4 +1,4 @@
-// File: C:\Users\DmitryKiporenko\Desktop\new\subscriptions-UAH\app\checkout\page.tsx
+// File: C:\Users\DmitryKiporenko\Desktop\new\folder\subscriptions-UAH\app\checkout\page.tsx
 import * as entry from '../../../../app/checkout/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -87,19 +87,33 @@ export async function POST(req: Request) {
       } else {
         console.error(`Product ID not found for location: ${location}, tier: ${slaTier}`);
       }
-    } else if (productType === 'Subscription' || productType === 'Product presentation service') {
+    } else if (productType === 'Subscription' || productType === 'Product presentation service' || productType === 'Market Agent') {
       // Map subscription and product presentation service products based on location
       const subscriptionProductMap: Record<string, string> = {
-        'Europe_Germany': 'prod_SewWUEbVwl7dHS',
-        'North America_USA': 'prod_Sqd44yg7CGgQsY',
-      };
-
-      const productPresentationServiceMap: Record<string, string> = {
-        'Europe_Germany': 'prod_StDZUp65e8VNOO',
-        'North America_USA': 'prod_StDKJvCffE3Nmj',
-      };
-
-      const productMap = productType === 'Subscription' ? subscriptionProductMap : productPresentationServiceMap;
+              'Europe_Germany': 'prod_SewWUEbVwl7dHS',
+              'North America_USA': 'prod_Sqd44yg7CGgQsY',
+            };
+      
+            const productPresentationServiceMap: Record<string, string> = {
+              'Europe_Germany': 'prod_StDZUp65e8VNOO',
+              'North America_USA': 'prod_StDKJvCffE3Nmj',
+            };
+      
+            const marketAgentProductMap: Record<string, string> = {
+              'Europe_Germany': 'prod_SuLPx96qTJOODr',
+              'North America_USA': 'prod_SuLPE2lEtex0fC',
+            };
+      
+            let productMap: Record<string, string>;
+            if (productType === 'Subscription') {
+              productMap = subscriptionProductMap;
+            } else if (productType === 'Product presentation service') {
+              productMap = productPresentationServiceMap;
+            } else if (productType === 'Market Agent') {
+              productMap = marketAgentProductMap;
+            } else {
+              return NextResponse.json({ error: 'Invalid product type' }, { status: 400 });
+            }
 
       let productId: string | undefined;
       
@@ -246,6 +260,74 @@ export async function POST(req: Request) {
             { status: 400 }
           );
         }
+        
+        // Check for duplicate market agent services
+        if (productType === 'Market Agent' && subscriptionProductType === 'Market Agent') {
+          return NextResponse.json(
+            { error: `You already have a market agent service at this location.` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // Validate location format for subscription, product presentation, and market agent services
+    if (productType === 'Subscription' || productType === 'Product presentation service' || productType === 'Market Agent') {
+      if (!location) {
+        return NextResponse.json(
+          { error: 'Location is required for this service type' },
+          { status: 400 }
+        );
+      }
+
+      // Validate location format (should be Continent_Country)
+      const locationParts = location.split('_');
+      if (locationParts.length < 2) {
+        return NextResponse.json(
+          { error: 'Invalid location format. Expected format: Continent_Country' },
+          { status: 400 }
+        );
+      }
+
+      const [continent, country] = locationParts;
+      
+      // Validate supported continents and countries
+      const validLocations: Record<string, string[]> = {
+        'Europe': ['Germany'],
+        'North America': ['USA']
+      };
+
+      if (!validLocations[continent] || !validLocations[continent].includes(country)) {
+        return NextResponse.json(
+          { error: `Unsupported location: ${location}. Supported locations: Europe_Germany, North America_USA` },
+          { status: 400 }
+        );
+      }
+
+      // Check if the location exists in the respective product map
+      let productMap: Record<string, string>;
+      if (productType === 'Subscription') {
+        productMap = {
+          'Europe_Germany': 'prod_SewWUEbVwl7dHS',
+          'North America_USA': 'prod_Sqd44yg7CGgQsY',
+        };
+      } else if (productType === 'Product presentation service') {
+        productMap = {
+          'Europe_Germany': 'prod_StDZUp65e8VNOO',
+          'North America_USA': 'prod_StDKJvCffE3Nmj',
+        };
+      } else {
+        productMap = {
+          'Europe_Germany': 'prod_SuLPx96qTJOODr',
+          'North America_USA': 'prod_SuLPE2lEtex0fC',
+        };
+      }
+
+      if (!productMap[location]) {
+        return NextResponse.json(
+          { error: `No product available for location: ${location}` },
+          { status: 400 }
+        );
       }
     }
 

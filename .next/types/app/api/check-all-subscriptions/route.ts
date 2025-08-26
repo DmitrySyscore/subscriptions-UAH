@@ -1,4 +1,4 @@
-// File: C:\Users\DmitryKiporenko\Desktop\new\subscriptions-UAH\app\api\check-all-subscriptions\route.ts
+// File: C:\Users\DmitryKiporenko\Desktop\new\folder\subscriptions-UAH\app\api\check-all-subscriptions\route.ts
 import * as entry from '../../../../../app/api/check-all-subscriptions/route.js'
 import type { NextRequest } from 'next/server.js'
 
