@@ -27,6 +27,13 @@ interface AllSubscriptionsStatus {
     location: string;
     serviceType: string;
   }>;
+  activeMarketAgents?: Array<{
+    subscriptionId: string;
+    productId: string;
+    productName: string;
+    location: string;
+    serviceType: string;
+  }>;
   totalActiveSubscriptions?: number;
 }
 
@@ -57,7 +64,7 @@ export default function CheckoutPage() {
       try {
         const res = await fetch(`/api/user-by-stripe-id?stripeId=${ref}`);
         const data = await res.json();
-
+        
         if (res.ok && data?.name) {
           setInviterName(data.name);
         } else {
@@ -89,7 +96,7 @@ export default function CheckoutPage() {
 
       try {
         const res = await fetch(`/api/check-all-subscriptions?userId=${encodeURIComponent(userId)}`);
-        const data = await res.json();
+        const data = await res.json();     
 
         if (res.ok) {
           setSubscriptionsStatus(data);
@@ -116,7 +123,7 @@ export default function CheckoutPage() {
             // Prevent cross-continent purchases for any service type
             if (existingContinents.size > 0 && !existingContinents.has(selectedContinent)) {
               const existingContinent = Array.from(existingContinents)[0];
-              setLocationConflict(`You already have active services in ${existingContinent}. You cannot purchase services in a different continent (${selectedContinent}).`);
+              setLocationConflict(`You have active services in ${existingContinent} already. You cannot purchase services in a different continent (${selectedContinent}).`);
               return;
             }
 
@@ -129,7 +136,7 @@ export default function CheckoutPage() {
               );
 
               if (existingSLA) {
-                setLocationConflict(`You already have a ${selectedTier} SLA subscription at this location. You can only upgrade to a higher tier.`);
+                setLocationConflict(`You have a ${selectedTier} SLA subscription at this location already. You can only upgrade to a higher tier.`);
                 return;
               }
 
@@ -143,7 +150,7 @@ export default function CheckoutPage() {
                 const selectedTierLevel = getTierLevel(selectedTier);
                 
                 if (selectedTierLevel <= currentTierLevel) {
-                  setLocationConflict(`You already have a ${existingAtLocation.slaTier} SLA at this location. You can only upgrade to a higher tier.`);
+                  setLocationConflict(`You have a ${existingAtLocation.slaTier} SLA at this location already. You can only upgrade to a higher tier.`);
                   return;
                 }
               }
@@ -152,13 +159,15 @@ export default function CheckoutPage() {
             // Check for duplicate subscriptions at same location
             if (productType === 'Subscription') {
               const existingSubscription = data.activeSubscriptions?.find(
-                (sub: any) => sub.location === selectedLocation
+                (sub: any) => {
+                  return sub.location === selectedLocation ||
+                         (selectedLocation && selectedLocation.startsWith(sub.location));
+                }
               );
-              
               if (existingSubscription) {
-                setLocationConflict(`You already have a subscription service at this location.`);
+                setLocationConflict(`You have a ${existingSubscription.productName} in ${selectedLocation.split('_')[0]} already.`);
                 return;
-              }
+              }            
             }
 
             // Check for duplicate product presentations at same location
@@ -168,7 +177,19 @@ export default function CheckoutPage() {
               );
               
               if (existingPresentation) {
-                setLocationConflict(`You already have a product presentation service at this location.`);
+                setLocationConflict(`You have a ${existingPresentation.productName} in ${selectedLocation} already.`);
+                return;
+              }
+            }
+
+            // Check for duplicate Market Agents at same location
+            if (productType === 'Market Agent') {
+              const existingMarketAgent = data.activeMarketAgents?.find(
+                (agent: any) => agent.location === selectedLocation
+              );
+
+              if (existingMarketAgent) {
+                setLocationConflict(`You have a ${existingMarketAgent.productName} in ${selectedLocation.split('_')[0]} already.`);
                 return;
               }
             }
@@ -209,7 +230,7 @@ export default function CheckoutPage() {
         
         if (!existingContinents.has(selectedContinent) && subscriptionsStatus.activeSLAs.length > 0) {
           const existingContinent = subscriptionsStatus.activeSLAs[0].location.split('_')[0];
-          alert(`You already have an active SLA subscription in ${existingContinent}. You cannot purchase an SLA in a different continent (${selectedContinent}).`);
+          alert(`You have an active SLA subscription in ${existingContinent} already. You cannot purchase an SLA in a different continent (${selectedContinent}).`);
           setLoading(false);
           return;
         }
@@ -247,36 +268,80 @@ export default function CheckoutPage() {
               return;
             }
           } else if (selectedTierLevel <= currentTierLevel) {
-            alert(`You already have a ${existingSLA.slaTier} SLA at this location. You can only upgrade to a higher tier.`);
+            alert(`You have a ${existingSLA.slaTier} SLA at this location already. You can only upgrade to a higher tier.`);
             setLoading(false);
             return;
           }
         }
       }
 
-      // Check for duplicate subscription services
-      if (productType === 'Subscription' && subscriptionsStatus?.activeSubscriptions) {
-        const existingSubscription = subscriptionsStatus.activeSubscriptions.find(
-          sub => sub.location === selectedLocation
+      // Comprehensive duplicate entry check for Location restrictions
+      if (selectedLocation) {
+        const allActiveServices = [
+          ...(subscriptionsStatus?.activeSLAs || []),
+          ...(subscriptionsStatus?.activeSubscriptions || []),
+          ...(subscriptionsStatus?.activeProductPresentations || []),
+          ...(subscriptionsStatus?.activeMarketAgents || [])
+        ];
+
+        // Check for any existing service at the same location
+        const existingService = allActiveServices.find(
+          service => service.location === selectedLocation
         );
-        
-        if (existingSubscription) {
-          alert(`You already have a subscription service at this location.`);
+
+        if (existingService) {
+          let serviceType = '';
+          if (subscriptionsStatus?.activeSLAs?.some(sla => sla.location === selectedLocation)) {
+            serviceType = 'SLA';
+          } else if (subscriptionsStatus?.activeSubscriptions?.some(sub => sub.location === selectedLocation)) {
+            serviceType = 'Subscription service';
+          } else if (subscriptionsStatus?.activeProductPresentations?.some(pres => pres.location === selectedLocation)) {
+            serviceType = 'Product presentation service';
+          } else if (subscriptionsStatus?.activeMarketAgents?.some(agent => agent.location === selectedLocation)) {
+            serviceType = 'Market Agent service';
+          }
+
+          alert(`You have a ${serviceType} at this location already. You cannot purchase additional services at the same location.`);
           setLoading(false);
           return;
         }
-      }
 
-      // Check for duplicate product presentations
-      if (productType === 'Product presentation service' && subscriptionsStatus?.activeProductPresentations) {
-        const existingPresentation = subscriptionsStatus.activeProductPresentations.find(
-          pres => pres.location === selectedLocation
-        );
-        
-        if (existingPresentation) {
-          alert(`You already have a product presentation service at this location.`);
-          setLoading(false);
-          return;
+        // Additional specific checks for each service type
+        if (productType === 'Subscription') {
+          // Already handled by the general check above, but keeping for explicit messaging
+          const existingSubscription = subscriptionsStatus?.activeSubscriptions?.find(
+            sub => sub.location === selectedLocation
+          );
+          
+          if (existingSubscription) {
+            alert(`You have a subscription service at this location already.`);
+            setLoading(false);
+            return;
+          }
+        }
+
+        if (productType === 'Product presentation service') {
+          const existingPresentation = subscriptionsStatus?.activeProductPresentations?.find(
+            pres => pres.location === selectedLocation
+          );
+          
+          if (existingPresentation) {
+            alert(`You have a product presentation service at this location already.`);
+            setLoading(false);
+            return;
+          }
+        }
+
+        if (productType === 'Market Agent') {
+          const existingMarketAgent = subscriptionsStatus?.activeMarketAgents?.find(
+            agent => agent.location === selectedLocation
+          );
+
+          if (existingMarketAgent) {
+            alert(`You have a Market Agent service at this location already.`);
+            setLoading(false);
+            return;
+          }
         }
       }
 
@@ -358,8 +423,6 @@ export default function CheckoutPage() {
         };
       }
     }
-    ///
-
     return null;
   };
 
@@ -438,6 +501,8 @@ export default function CheckoutPage() {
             selectedText = `Subscription Service - ${continent}`;
           } else if (productType === 'Product presentation service') {
             selectedText = `Product Presentation Service - ${continent}, ${country}, ${city}`;
+          } else if (productType === 'Market Agent') {
+            selectedText = `Market Agent - ${continent}`;
           }
         }
 
@@ -497,6 +562,25 @@ export default function CheckoutPage() {
                     return (
                       <div key={index} className="text-sm text-purple-600">
                         -- {service.productName} - {continent}, {country}, {city}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Display active Market Agent services */}
+            {subscriptionsStatus?.activeMarketAgents && subscriptionsStatus.activeMarketAgents.length > 0 && (
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold mb-2 text-orange-600">Active Market Agent Services:</h3>
+                <div className="space-y-1">
+                  {subscriptionsStatus.activeMarketAgents.map((agent, index) => {
+                    const locationParts = agent.location.split('_');
+                    const continent = locationParts[0] || 'Unknown';
+                    
+                    return (
+                      <div key={index} className="text-sm text-orange-600">
+                        -- {agent.productName} - {continent}
                       </div>
                     );
                   })}
