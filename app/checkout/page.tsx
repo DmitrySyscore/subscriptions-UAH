@@ -275,76 +275,6 @@ export default function CheckoutPage() {
         }
       }
 
-      // Comprehensive duplicate entry check for Location restrictions
-      if (selectedLocation) {
-        const allActiveServices = [
-          ...(subscriptionsStatus?.activeSLAs || []),
-          ...(subscriptionsStatus?.activeSubscriptions || []),
-          ...(subscriptionsStatus?.activeProductPresentations || []),
-          ...(subscriptionsStatus?.activeMarketAgents || [])
-        ];
-
-        // Check for any existing service at the same location
-        const existingService = allActiveServices.find(
-          service => service.location === selectedLocation
-        );
-
-        if (existingService) {
-          let serviceType = '';
-          if (subscriptionsStatus?.activeSLAs?.some(sla => sla.location === selectedLocation)) {
-            serviceType = 'SLA';
-          } else if (subscriptionsStatus?.activeSubscriptions?.some(sub => sub.location === selectedLocation)) {
-            serviceType = 'Subscription service';
-          } else if (subscriptionsStatus?.activeProductPresentations?.some(pres => pres.location === selectedLocation)) {
-            serviceType = 'Product presentation service';
-          } else if (subscriptionsStatus?.activeMarketAgents?.some(agent => agent.location === selectedLocation)) {
-            serviceType = 'Market Agent service';
-          }
-
-          alert(`You have a ${serviceType} at this location already. You cannot purchase additional services at the same location.`);
-          setLoading(false);
-          return;
-        }
-
-        // Additional specific checks for each service type
-        if (productType === 'Subscription') {
-          // Already handled by the general check above, but keeping for explicit messaging
-          const existingSubscription = subscriptionsStatus?.activeSubscriptions?.find(
-            sub => sub.location === selectedLocation
-          );
-          
-          if (existingSubscription) {
-            alert(`You have a subscription service at this location already.`);
-            setLoading(false);
-            return;
-          }
-        }
-
-        if (productType === 'Product presentation service') {
-          const existingPresentation = subscriptionsStatus?.activeProductPresentations?.find(
-            pres => pres.location === selectedLocation
-          );
-          
-          if (existingPresentation) {
-            alert(`You have a product presentation service at this location already.`);
-            setLoading(false);
-            return;
-          }
-        }
-
-        if (productType === 'Market Agent') {
-          const existingMarketAgent = subscriptionsStatus?.activeMarketAgents?.find(
-            agent => agent.location === selectedLocation
-          );
-
-          if (existingMarketAgent) {
-            alert(`You have a Market Agent service at this location already.`);
-            setLoading(false);
-            return;
-          }
-        }
-      }
-
       const res = await fetch('/api/yousign/start-signing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -352,11 +282,21 @@ export default function CheckoutPage() {
           ref,
           signerFirstName,
           signerLastName,
-          signerEmail
+          signerEmail,
+          productType: searchParams.get('productType'),
+          location: searchParams.get('location'),
+          slaTier: searchParams.get('slaTier')
         }),
       });
       
-      console.log ('app\checkout\page.tsx body', JSON.stringify({ ref, signerFirstName, signerLastName }));
+      console.log ('app\checkout\page.tsx body', JSON.stringify({
+        ref,
+        signerFirstName,
+        signerLastName,
+        productType: searchParams.get('productType'),
+        location: searchParams.get('location'),
+        slaTier: searchParams.get('slaTier')
+      }));
 
       const data = await res.json();
 
@@ -428,9 +368,9 @@ export default function CheckoutPage() {
 
   const getTierLevel = (tier: string): number => {
     const tierMap: Record<string, number> = {
-      'Bronze': 1,
-      'Silver': 2,
-      'Gold': 3,
+      'Silver': 1,
+      'Gold': 2,
+      'Platinum': 3,
     };
     return tierMap[tier] || 0;
   };

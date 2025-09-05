@@ -16,14 +16,14 @@ export async function POST(req: Request) {
     // Map location and tier to actual Stripe product IDs
     const productIdMap: Record<string, Record<string, string>> = {
       EU: {
-        Bronze: 'prod_Sj8nABZluozK4K',
-        Silver: 'prod_Sj8njJI9kmb4di',
-        Gold: 'prod_Sj8nnl3iCNdqGM',
+        Silver: 'prod_Sj8nABZluozK4K',
+        Gold: 'prod_Sj8njJI9kmb4di',
+        Platinum: 'prod_Sj8nnl3iCNdqGM',
       },
       US: {
-        Bronze: 'prod_Sj8LxTwLUfzk5t',
-        Silver: 'prod_Sj8Lk6eprBEQ3k',
-        Gold: 'prod_Sj8Lt4NDbZzI5i',
+        Silver: 'prod_Sj8LxTwLUfzk5t',
+        Gold: 'prod_Sj8Lk6eprBEQ3k',
+        Platinum: 'prod_Sj8Lt4NDbZzI5i',
       },
     };
 
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     let region = location;
     if (location.startsWith('Europe')) {
       region = 'EU';
-    } else if (location.startsWith('US')) {
+    } else if (location.startsWith('North America') || location.startsWith('US')) {
       region = 'US';
     }
 
@@ -60,16 +60,19 @@ export async function POST(req: Request) {
     const subscriptionProductMap: Record<string, string> = {
       'Europe_Germany': 'prod_SewWUEbVwl7dHS',
       'North America_USA': 'prod_Sqd44yg7CGgQsY',
+      'North America_USA_Dallas': 'prod_Sqd44yg7CGgQsY',
     };
 
     const productPresentationServiceMap: Record<string, string> = {
       'Europe_Germany': 'prod_StDZUp65e8VNOO',
       'North America_USA': 'prod_StDKJvCffE3Nmj',
+      'North America_USA_Dallas': 'prod_StDKJvCffE3Nmj',
     };
 
     const marketAgentProductMap: Record<string, string> = {
       'Europe_Germany': 'prod_SuLPx96qTJOODr',
       'North America_USA': 'prod_SuLPE2lEtex0fC',
+      'North America_USA_Dallas': 'prod_SuLPE2lEtex0fC',
     };
 
     let productMap: Record<string, string>;
@@ -104,6 +107,12 @@ export async function POST(req: Request) {
           
           const key = `${continent}_${country}`;
           productId = productMap[key];
+          
+          // If still no match, try without city (for locations like North America_USA_Dallas)
+          if (!productId && parts.length > 2) {
+            const baseKey = `${continent}_${country}`;
+            productId = productMap[baseKey];
+          }
         }
       }
     }

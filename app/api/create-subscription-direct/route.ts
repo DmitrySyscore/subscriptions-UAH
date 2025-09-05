@@ -42,29 +42,29 @@ export async function POST(req: Request) {
       
       const productIdMap: Record<string, Record<string, string>> = {
         'Washington': {
-          Bronze: 'prod_Sj8LxTwLUfzk5t',
-          Silver: 'prod_Sj8Lk6eprBEQ3k',
-          Gold: 'prod_Sj8Lt4NDbZzI5i',
+          Silver: 'prod_Sj8LxTwLUfzk5t',
+          Gold: 'prod_Sj8Lk6eprBEQ3k',
+          Platinum: 'prod_Sj8Lt4NDbZzI5i',
         },
         'Dallas': {
-          Bronze: 'prod_Sj8LxTwLUfzk5t',
-          Silver: 'prod_Sj8Lk6eprBEQ3k',
-          Gold: 'prod_Sj8Lt4NDbZzI5i',
+          Silver: 'prod_Sj8LxTwLUfzk5t',
+          Gold: 'prod_Sj8Lk6eprBEQ3k',
+          Platinum: 'prod_Sj8Lt4NDbZzI5i',
         },
         'New York': {
-          Bronze: 'prod_Sj8LxTwLUfzk5t',
-          Silver: 'prod_Sj8Lk6eprBEQ3k',
-          Gold: 'prod_Sj8Lt4NDbZzI5i',
+          Silver: 'prod_Sj8LxTwLUfzk5t',
+          Gold: 'prod_Sj8Lk6eprBEQ3k',
+          Platinum: 'prod_Sj8Lt4NDbZzI5i',
         },
         'Berlin': {
-          Bronze: 'prod_Sj8nABZluozK4K',
-          Silver: 'prod_Sj8njJI9kmb4di',
-          Gold: 'prod_Sj8nnl3iCNdqGM',
+          Silver: 'prod_Sj8nABZluozK4K',
+          Gold: 'prod_Sj8njJI9kmb4di',
+          Platinum: 'prod_Sj8nnl3iCNdqGM',
         },
         'Dresden': {
-          Bronze: 'prod_Sj8nABZluozK4K',
-          Silver: 'prod_Sj8njJI9kmb4di',
-          Gold: 'prod_Sj8nnl3iCNdqGM',
+          Silver: 'prod_Sj8nABZluozK4K',
+          Gold: 'prod_Sj8njJI9kmb4di',
+          Platinum: 'prod_Sj8nnl3iCNdqGM',
         },
       };
 
@@ -125,17 +125,9 @@ export async function POST(req: Request) {
         // If no exact match, try to extract continent and country
         if (!productId) {
           const parts = location.split('_');
-          if (parts.length >= 1) {
+          if (parts.length >= 2) {
             const continent = parts[0];
-            let country = parts[1] || '';
-            
-            // Handle common variations
-            if (continent === 'North America' && (!country || country === '')) {
-              country = 'USA';
-            } else if (continent === 'Europe' && (!country || country === '')) {
-              country = 'Germany';
-            }
-            
+            const country = parts[1];
             const key = `${continent}_${country}`;
             productId = productMap[key];
           }
@@ -232,9 +224,9 @@ export async function POST(req: Request) {
           
           // Check for tier upgrades
           const tierLevels: Record<string, number> = {
-            'Bronze': 1,
-            'Silver': 2,
-            'Gold': 3
+            'Silver': 1,
+            'Gold': 2,
+            'Platinum': 3
           };
           
           if (existingTier && slaTier && tierLevels[slaTier] <= tierLevels[existingTier]) {
@@ -280,16 +272,18 @@ export async function POST(req: Request) {
         );
       }
 
-      // Validate location format (should be Continent_Country)
+      // Validate location format and extract continent_country
       const locationParts = location.split('_');
       if (locationParts.length < 2) {
         return NextResponse.json(
-          { error: 'Invalid location format. Expected format: Continent_Country' },
+          { error: 'Invalid location format. Expected format: Continent_Country[_City]' },
           { status: 400 }
         );
       }
 
-      const [continent, country] = locationParts;
+      const continent = locationParts[0];
+      const country = locationParts[1];
+      const continentCountryKey = `${continent}_${country}`;
       
       // Validate supported continents and countries
       const validLocations: Record<string, string[]> = {
@@ -323,9 +317,9 @@ export async function POST(req: Request) {
         };
       }
 
-      if (!productMap[location]) {
+      if (!productMap[continentCountryKey]) {
         return NextResponse.json(
-          { error: `No product available for location: ${location}` },
+          { error: `No product available for location: ${continentCountryKey}` },
           { status: 400 }
         );
       }

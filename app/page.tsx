@@ -173,28 +173,28 @@ export default function HomePage() {
               required
             >
               <option value="">Select tier</option>
+              <option value="Platinum">Platinum</option>
               <option value="Gold">Gold</option>
               <option value="Silver">Silver</option>
-              <option value="Bronze">Bronze</option>
             </select>
             <div className="mt-2 text-sm text-gray-600">
+              {slaTier === 'Platinum' && (location === 'Berlin' || location === 'Dresden') && (
+                <span>Platinum: Premium support with fastest response times - €30/month</span>
+              )}
+              {slaTier === 'Platinum' && (location === 'Washington' || location === 'Dallas' || location === 'New York') && (
+                <span>Platinum: Premium support with fastest response times - $35/month</span>
+              )}
               {slaTier === 'Gold' && (location === 'Berlin' || location === 'Dresden') && (
-                <span>Gold: Premium support with fastest response times - €30/month</span>
+                <span>Gold: Standard support with good response times - €20/month</span>
               )}
               {slaTier === 'Gold' && (location === 'Washington' || location === 'Dallas' || location === 'New York') && (
-                <span>Gold: Premium support with fastest response times - $35/month</span>
+                <span>Gold: Standard support with good response times - $25/month</span>
               )}
               {slaTier === 'Silver' && (location === 'Berlin' || location === 'Dresden') && (
-                <span>Silver: Standard support with good response times - €20/month</span>
+                <span>Silver: Basic support with standard response times - €10/month</span>
               )}
               {slaTier === 'Silver' && (location === 'Washington' || location === 'Dallas' || location === 'New York') && (
-                <span>Silver: Standard support with good response times - $25/month</span>
-              )}
-              {slaTier === 'Bronze' && (location === 'Berlin' || location === 'Dresden') && (
-                <span>Bronze: Basic support with standard response times - €10/month</span>
-              )}
-              {slaTier === 'Bronze' && (location === 'Washington' || location === 'Dallas' || location === 'New York') && (
-                <span>Bronze: Basic support with standard response times - $15/month</span>
+                <span>Silver: Basic support with standard response times - $15/month</span>
               )}
             </div>
           </div>
@@ -300,9 +300,17 @@ export default function HomePage() {
 
         <button
           onClick={handleRegisterClick}
-          disabled={!continent || !productType || (productType !== 'Subscription' && productType !== 'Market Agent' && !location)}
+          disabled={
+            !productType ||
+            (productType === 'SLA' && !slaTier) ||
+            !continent ||
+            (productType !== 'Subscription' && productType !== 'Market Agent' && !location)
+          }
           className={`w-full px-4 py-2 rounded transition ${
-            continent && productType && (productType === 'Subscription' || productType === 'Market Agent' || (country && location))
+            productType &&
+            (productType !== 'SLA' || slaTier) &&
+            continent &&
+            (productType === 'Subscription' || productType === 'Market Agent' || location)
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}
@@ -337,9 +345,19 @@ export default function HomePage() {
 
         <button
           onClick={handlePurchaseClick}
-          disabled={!continent || !productType || !userIdRef.trim() || (productType !== 'Subscription' && productType !== 'Market Agent' && !location)}
+          disabled={
+            !productType ||
+            (productType === 'SLA' && !slaTier) ||
+            !continent ||
+            !userIdRef.trim() ||
+            (productType !== 'Subscription' && productType !== 'Market Agent' && !location)
+          }
           className={`w-full px-4 py-2 rounded transition ${
-            continent && productType && userIdRef.trim() && (productType === 'Subscription' || productType === 'Market Agent' || (country && location))
+            productType &&
+            (productType !== 'SLA' || slaTier) &&
+            continent &&
+            userIdRef.trim() &&
+            (productType === 'Subscription' || productType === 'Market Agent' || location)
               ? 'bg-blue-600 text-white hover:bg-blue-700'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
           }`}

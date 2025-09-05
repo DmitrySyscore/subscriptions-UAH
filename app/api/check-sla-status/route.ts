@@ -8,13 +8,13 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 // SLA product IDs from create-subscription-direct/route.ts
 const SLA_PRODUCTS = [
   // EU products
-  'prod_Sj8nABZluozK4K', // Bronze EU
-  'prod_Sj8njJI9kmb4di', // Silver EU
-  'prod_Sj8nnl3iCNdqGM', // Gold EU
+  'prod_Sj8nABZluozK4K', // Silver EU
+  'prod_Sj8njJI9kmb4di', // Gold EU
+  'prod_Sj8nnl3iCNdqGM', // Platinum EU
   // US products
-  'prod_Sj8LxTwLUfzk5t', // Bronze US
-  'prod_Sj8Lk6eprBEQ3k', // Silver US
-  'prod_Sj8Lt4NDbZzI5i', // Gold US
+  'prod_Sj8LxTwLUfzk5t', // Silver US
+  'prod_Sj8Lk6eprBEQ3k', // Gold US
+  'prod_Sj8Lt4NDbZzI5i', // Platinum US
 ];
 
 function isValidProduct(product: any): product is Stripe.Product {
@@ -118,12 +118,12 @@ export async function GET(req: NextRequest) {
 
 function getSLATierFromProduct(productId: string): string {
   const tierMap: Record<string, string> = {
-    'prod_Sj8nABZluozK4K': 'Bronze',
-    'prod_Sj8njJI9kmb4di': 'Silver',
-    'prod_Sj8nnl3iCNdqGM': 'Gold',
-    'prod_Sj8LxTwLUfzk5t': 'Bronze',
-    'prod_Sj8Lk6eprBEQ3k': 'Silver',
-    'prod_Sj8Lt4NDbZzI5i': 'Gold',
+    'prod_Sj8nABZluozK4K': 'Silver',
+    'prod_Sj8njJI9kmb4di': 'Gold',
+    'prod_Sj8nnl3iCNdqGM': 'Platinum',
+    'prod_Sj8LxTwLUfzk5t': 'Silver',
+    'prod_Sj8Lk6eprBEQ3k': 'Gold',
+    'prod_Sj8Lt4NDbZzI5i': 'Platinum',
   };
   return tierMap[productId] || 'Unknown';
 }
